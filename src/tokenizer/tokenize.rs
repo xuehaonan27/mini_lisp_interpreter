@@ -9,7 +9,7 @@ pub struct Tokenizer {
 
 impl Tokenizer {
     pub fn new(content: String) -> Self {
-        let mut content_vec: Vec<char> = content.chars().collect();
+        let content_vec: Vec<char> = content.chars().collect();
         Self { content_vec, pos: 0}
     }
     fn next_token(&mut self) -> Option<Token> {
@@ -77,7 +77,7 @@ impl Tokenizer {
                     if first_char.is_digit(10) || first_char == '+' || first_char == '-' || first_char == '.' {
                         match text.parse::<f64>() {
                             Ok(n) => return Some(Token::Numeric(n)),
-                            Err(e) => {},
+                            Err(_e) => {},
                         }
                     }
                     return Some(Token::Identifier(text));

@@ -1,10 +1,13 @@
 use std::io;
 mod tokenizer;
 mod value;
+mod parse;
+mod eval_env;
 use crate::tokenizer::Tokenizer;
+use crate::parse::Parser;
 use value::Value;
 fn main() {
-    let a = Value::NumericValue(42.0);
+    /*let a = Value::NumericValue(42.0);
     let b = Value::BooleanValue(false);
     let c = Value::SymbolValue("eq?".to_string());
     let d = Value::StringValue("Hello".to_string());
@@ -24,12 +27,15 @@ fn main() {
     println!("{}", c.to_string());
     println!("{}", d.to_string());
     println!("{}", e.to_string());
-    println!("{}", f.to_string());
+    println!("{}", f.to_string());*/
     
-    /*let mut input = String::new();
+    let mut input = String::new();
     io::stdin().read_line(&mut input).unwrap();
     let mut tokenizer = Tokenizer::new(input);
     let tokens = tokenizer.tokenize();
-    println!("{:?}", tokens);*/
-     
+    // println!("{:?}", tokens);
+    let mut parser = Parser::new(tokens);
+    let value = parser.parse();
+    println!("{}", value.to_string());
+
 }
