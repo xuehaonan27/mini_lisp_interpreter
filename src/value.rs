@@ -1,6 +1,8 @@
+use std::char::CharTryFromError;
 use std::hash::{Hash,Hasher};
-type BuiltinFn = fn(Vec<Value>) -> Value;
+pub type BuiltinFn = fn(Vec<Value>, env: &EvalEnv) -> Value;
 
+use std::fmt::Debug;
 #[derive(Clone)]
 pub enum Value {
     BooleanValue(bool),
@@ -16,6 +18,20 @@ pub fn is_integer(num: &f64) -> bool {
     num.abs() < std::f64::EPSILON ||
     (num - num.floor()).abs() < std::f64::EPSILON ||
     (num - num.ceil()).abs() < std::f64::EPSILON
+}
+impl Debug for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BooleanValue(b) => write!(f, "BooleanValue {b}"),
+            Self::NumericValue(n) => write!(f, "NumericValue {n}"),
+            Self::StringValue(s) => write!(f, "StringValue {s}"),
+            Self::NilValue => write!(f, "NilValue"),
+            Self::SymbolValue(s) => write!(f, "SymbolValue {s}"),
+            Self::PairValue(_, _) => write!(f, "PairValue {}", self.to_string()),
+            Self::ProcedureValue(_) => write!(f, "ProcedureValue"),
+            Self::LambdaValue(_, _) => write!(f, "LambdaValue"),
+        }
+    }
 }
 impl ToString for Value {
     fn to_string(&self) -> String {
@@ -112,5 +128,50 @@ impl Hash for Value {
             Value::ProcedureValue(f) => (**f as *const usize).hash(state),
             v @ Value::LambdaValue(_params, _body) => v.to_string().hash(state),
         }
+    }
+}
+
+/*impl Value {
+    pub fn to_vector(&self) -> Vec<Self> {
+        let mut vec: Vec<Self> = Vec::new();
+        let mut my_value = self.clone();
+        loop {
+            match my_value {
+                v @ Self::BooleanValue(_) => vec.push(v.clone()),
+                v @ Self::NumericValue(_) => vec.push(v.clone()),
+                v @ Self::StringValue(_) => vec.push(v.clone()),
+                Self::NilValue => return vec,
+                v @ Self::SymbolValue(_) => vec.push(v.clone()),
+                Self::PairValue(car, cdr) => {
+                    vec.push(*car.clone());
+                    my_value = (*cdr).clone();
+                },
+                _ => panic!("Invalid format when converting pairvalue to vector."),
+            }
+        }
+    }
+}*/
+use std::rc::Rc;
+
+use crate::eval_env::EvalEnv;
+impl Value {
+    pub fn to_vector(&self) -> Vec<Self> {
+        fn to_vector_recursive(expr: &Value, vec: &mut Vec<Rc<Value>>) {
+            match expr {
+                Value::BooleanValue(_) => vec.push(Rc::new(expr.clone())),
+                Value::NumericValue(_) => vec.push(Rc::new(expr.clone())),
+                Value::StringValue(_) => vec.push(Rc::new(expr.clone())),
+                Value::NilValue => (),
+                Value::SymbolValue(_) => vec.push(Rc::new(expr.clone())),
+                Value::PairValue(car, cdr) => {
+                    vec.push(Rc::new(*(*car).clone()));
+                    to_vector_recursive(cdr, vec);
+                }
+                _ => panic!("Invalid format when converting pairvalue to vector."),
+            }
+        }
+        let mut vec: Vec<Rc<Value>> = Vec::new();
+        to_vector_recursive(self, &mut vec);
+        vec.iter().cloned().map(|v| (*v).clone()).collect()
     }
 }
