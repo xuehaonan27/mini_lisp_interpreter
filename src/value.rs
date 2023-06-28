@@ -1,4 +1,3 @@
-use std::char::CharTryFromError;
 use std::hash::{Hash,Hasher};
 pub type BuiltinFn = fn(Vec<Value>, env: &EvalEnv) -> Value;
 

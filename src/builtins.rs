@@ -1,10 +1,5 @@
-use std::collections::HashMap;
-use crate::value::BuiltinFn;
 use crate::value::Value;
 use crate::eval_env::EvalEnv;
-/*static BUILTIN_PROCS: HashMap<String, BuiltinFn> = HashMap::from([
-    ("apply".to_string(), apply as BuiltinFn),
-]);*/
 
 pub fn apply(params: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
 fn print(params: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
@@ -29,14 +24,23 @@ fn car(params: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
 fn cdr(params: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
 fn cons(params: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
 fn length(params: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
-fn list(params: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
+pub fn list(params: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
 fn map(params: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
 fn loosemap(params: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
 fn strictmap(params: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
 fn filter(params: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
 fn reduce(params: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
 
-fn add(params: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
+pub fn add(params: Vec<Value>, env: &EvalEnv) -> Value {
+    let mut result: f64 = 0f64;
+    for param in params {
+        match param {
+            Value::NumericValue(n) => result += n,
+            _ => panic!("Cannot add a non-numeric value."),
+        }
+    }
+    Value::NumericValue(result)
+}
 fn subtract(params: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
 fn multiply(params: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
 fn divide(params: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
