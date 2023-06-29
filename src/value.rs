@@ -42,7 +42,7 @@ impl ToString for Value {
                     format!("{}", *n as i64)
                 }
                 else {
-                    format!("{:.6}", n)
+                    format!("{:6}", n)
                 }
             },
             Value::StringValue(s) => {
