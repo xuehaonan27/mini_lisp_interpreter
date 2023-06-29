@@ -3,10 +3,36 @@ use crate::eval_env::EvalEnv;
 
 pub type SpecialForm = fn(Vec<Value>, &EvalEnv) -> Value;
 
-pub fn define_form(args: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
+pub fn define_form(args: Vec<Value>, env: &EvalEnv) -> Value {
+    if args.len() < 2 {
+        panic!("SyntaxError: Missing parameter in form <define>.");
+    }
+    match args[0].clone() {
+        Value::SymbolValue(s) => {
+            if env.symbol_map.contains_key(&s) {
+                _ = env.symbol_map.insert(s, env.symbol_map.get(&args[1].to_string()).unwrap().clone());
+            }
+            else {
+                _ = env.symbol_map.insert(s, env.eval(args[1].clone()));
+            }
+        },
+        Value::PairValue(car, cdr) => {
+            match *car {
+                Value::SymbolValue(s) => {
+                    let mut lambda_args: Vec<Value> = vec![*cdr];
+                    lambda_args.append(&mut args[1..].to_vec());
+                    _ = env.symbol_map.insert(s, lambda_form(lambda_args, env));
+                },
+                _ => panic!("SyntaxError: Malformed define."),
+            }
+        },
+        _ => panic!("SyntaxError: Malformed define."),
+    }
+    todo!();
+}
 pub fn quote_form(args: Vec<Value>, _env: &EvalEnv) -> Value {
     if args.len() < 1 {
-        panic!("Missing parameter in quote form.");
+        panic!("SyntaxError: Missing parameter in form <quote>.");
     }
     else {
         args[0].clone()
@@ -77,13 +103,22 @@ pub fn or_form(args: Vec<Value>, env: &EvalEnv) -> Value {
     }
     Value::BooleanValue(false)
 }
-pub fn lambda_form(args: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
+pub fn lambda_form(args: Vec<Value>, env: &EvalEnv) -> Value {
+    let vec: Vec<Value> = args[0].to_vector();
+    let mut params: Vec<String> = Vec::new();
+    vec.iter().for_each(|value| params.push(value.to_string()));
+    let body: Vec<Value> = args[1..].to_vec();
+    match args[0] {
+        Value::PairValue(_, _) => return Value::LambdaValue(Box::new(params), Box::new(body), env.clone()),
+        _ => return Value::LambdaValue(Box::new(Vec::<String>::new()), Box::new(body), env.clone()),
+    }
+}
 pub fn cond_form(args: Vec<Value>, env: &EvalEnv) -> Value {
     todo!();
 }
 pub fn begin_form(args: Vec<Value>, env: &EvalEnv) -> Value {
     if args.is_empty() {
-        panic!("SyntaxError: missing parameter.");
+        panic!("SyntaxError: missing parameter in form <begin>.");
     }
     let mut result: Value = Value::NilValue;
     for arg in args {

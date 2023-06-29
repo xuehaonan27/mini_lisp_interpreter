@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::cell::Cell;
 use crate::value::Value;
 use crate::builtins;
 use crate::special_forms::*;
