@@ -69,7 +69,7 @@ impl ToString for Value {
                     body_string += bodyv.to_string().as_str();
                     body_string.push(' ');
                 }
-                for bind in &env.symbol_map {
+                for bind in env.symbol_map.borrow().clone() {
                     env_string += format!("({}, {})", bind.0, bind.1.to_string()).as_str();
                     env_string.push('\n');
                 }

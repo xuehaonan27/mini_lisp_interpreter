@@ -1,14 +1,13 @@
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::cell::Cell;
+use std::cell::RefCell;
 use crate::value::Value;
-use crate::builtins;
 use crate::special_forms::*;
 use crate::builtins::*;
 use crate::value::BuiltinFn;
 #[derive(Clone)]
 pub struct EvalEnv{
-    pub symbol_map: HashMap<String, Value>,
+    pub symbol_map: RefCell<HashMap<String, Value>>,
     pub parent: Rc<Option<EvalEnv>>,
     pub special_forms: HashMap<String, SpecialForm>,
     pub builtin_procs: HashMap<String, BuiltinFn>
@@ -88,7 +87,7 @@ impl EvalEnv {
             ("zero?".to_string(), zero_or_not as BuiltinFn),
             ("sort".to_string(), sort as BuiltinFn),
         ]);
-        let symbol_map: HashMap<String, Value> = HashMap::new();
+        let symbol_map: RefCell<HashMap<String, Value>> = RefCell::new(HashMap::new());
         let parent: Rc<Option<EvalEnv>> = Rc::new(None);
         Self {symbol_map, parent, special_forms, builtin_procs}
     }
@@ -106,11 +105,12 @@ impl EvalEnv {
         for (key, value) in params.iter().zip(args.iter()) {
             symbol_map.insert(key.clone(), value.clone());
         }
+        let symbol_map = RefCell::new(symbol_map);
         Self {symbol_map, parent, special_forms, builtin_procs}
     }
     pub fn find_binding(&self, name: &String) -> Option<&Value> {
-        if self.symbol_map.contains_key(name) {
-            self.symbol_map.get(name)
+        if self.symbol_map.borrow().contains_key(name) {
+            self.symbol_map.borrow().get(name)
         }
         else {
             if self.parent.is_none() {

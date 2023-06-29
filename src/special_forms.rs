@@ -9,11 +9,12 @@ pub fn define_form(args: Vec<Value>, env: &EvalEnv) -> Value {
     }
     match args[0].clone() {
         Value::SymbolValue(s) => {
-            if env.symbol_map.contains_key(&s) {
-                _ = env.symbol_map.insert(s, env.symbol_map.get(&args[1].to_string()).unwrap().clone());
+            let ref_of_map = env.symbol_map.borrow_mut();
+            if ref_of_map.contains_key(&s) {
+                _ = ref_of_map.insert(s, ref_of_map.get(&args[1].to_string()).unwrap().clone());
             }
             else {
-                _ = env.symbol_map.insert(s, env.eval(args[1].clone()));
+                _ = ref_of_map.insert(s, env.eval(args[1].clone()));
             }
         },
         Value::PairValue(car, cdr) => {
@@ -21,7 +22,7 @@ pub fn define_form(args: Vec<Value>, env: &EvalEnv) -> Value {
                 Value::SymbolValue(s) => {
                     let mut lambda_args: Vec<Value> = vec![*cdr];
                     lambda_args.append(&mut args[1..].to_vec());
-                    _ = env.symbol_map.insert(s, lambda_form(lambda_args, env));
+                    _ = env.symbol_map.borrow_mut().insert(s, lambda_form(lambda_args, env));
                 },
                 _ => panic!("SyntaxError: Malformed define."),
             }

@@ -302,7 +302,7 @@ pub fn defined_local_or_not(params: Vec<Value>, env: &EvalEnv) -> Value {
         panic!("SyntaxError: Too many argument in procedure <defined_local?>.");
     }
     else {
-        if env.symbol_map.contains_key(&params[0].to_string()) {
+        if env.symbol_map.borrow().contains_key(&params[0].to_string()) {
             return Value::BooleanValue(true);
         }
         else {
