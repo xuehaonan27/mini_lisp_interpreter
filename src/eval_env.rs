@@ -91,11 +91,20 @@ impl EvalEnv {
         let parent: Rc<Option<EvalEnv>> = Rc::new(None);
         Self {symbol_map, parent, special_forms, builtin_procs}
     }
-    pub fn derive(&self) -> Self {
+    pub fn derive(&self, params: Vec<String>, args: Vec<Value>) -> Self {
+        if params.len() < args.len() {
+            panic!("Too many parameters.");
+        }
+        else if params.len() > args.len() {
+            panic!("Missing parameters.");
+        }
         let special_forms: HashMap<String, SpecialForm> = self.special_forms.clone();
         let builtin_procs: HashMap<String, BuiltinFn> = self.builtin_procs.clone();
         let parent: Rc<Option<EvalEnv>> = Rc::new(Some(self.clone()));
-        let symbol_map: HashMap<String, Value> = HashMap::new();
+        let mut symbol_map: HashMap<String, Value> = HashMap::new();
+        for (key, value) in params.iter().zip(args.iter()) {
+            symbol_map.insert(key.clone(), value.clone());
+        }
         Self {symbol_map, parent, special_forms, builtin_procs}
     }
     pub fn find_binding(&self, name: &String) -> Option<&Value> {
@@ -127,7 +136,7 @@ impl EvalEnv {
             Value::StringValue(_) => return expr,
             Value::NilValue => panic!("Evaluating nil is prohibited."),
             Value::ProcedureValue(_) => return expr,
-            Value::LambdaValue(_, _) => return expr,
+            Value::LambdaValue(_, _, _) => return expr,
             Value::SymbolValue(s) => {
                 // return self.find_binding(&s).expect(&format!("Variable {} not defined.", s)).clone();
 
@@ -154,38 +163,14 @@ impl EvalEnv {
             exprs @ Value::PairValue(_, _) => {
                 let v: Vec<Value> = exprs.to_vector();
                 match &v[0] {
-                    // 注意这里的顺序需要调换! 应该首先尝试匹配symbol_map而不是特殊形式和内置过程!
                     Value::SymbolValue(s) => {
-                        /*if self.special_forms.contains_key(s) {
-                            if *s == "unquote".to_string() {
-                                panic!("Calling unquote outside quasiquote is an undefined behavior.");
-                            }
-                            return self.special_forms.get(s).unwrap()(v[1..].to_vec(), self);
-                        }
-                        else if self.builtin_procs.contains_key(s) {
-                            let args: Vec<Value> = v[1..].iter().cloned().map(|value| self.eval(value)).collect();
-                            return self.builtin_procs.get(s).unwrap()(args, self);
-                        }
-                        else {
-                            match self.find_binding(s) {
-                                None => panic!("Name {s} not defined."),
-                                Some(Value::ProcedureValue(f)) => {
-                                    let args: Vec<Value> = v[1..].iter().cloned().map(|value| self.eval(value)).collect();
-                                    return f(args, self);
-                                },
-                                Some(Value::LambdaValue(_, _)) => {
-                                    todo!();
-                                },
-                                _ => panic!("Invalid format."),
-                            }
-                        }*/
                         match self.find_binding(s) {
                             None => {},
                             Some(Value::ProcedureValue(f)) => {
                                 let args: Vec<Value> = v[1..].iter().cloned().map(|value| self.eval(value)).collect();
                                 return f(args, self);
                             },
-                            Some(Value::LambdaValue(_, _)) => {
+                            Some(Value::LambdaValue(_, _, _)) => {
                                 todo!();
                             },
                             _ => panic!("Invalid format."),
@@ -218,9 +203,13 @@ impl EvalEnv {
                         // self.apply(proc, v[1..].to_vec())
                         f(v[1..].to_vec(), self)
                     },
-                    Value::LambdaValue(params, body) => {
-                        let proc: Value = self.eval(v[0].clone());
-                        self.apply(proc, v[1..].to_vec())
+                    Value::LambdaValue(params, body, env) => {
+                        let env_derived = env.derive(*params.clone(), v[1..].to_vec());
+                        let mut result: Value = Value::NilValue;
+                        for bodyv in *body.clone() {
+                            result = env_derived.eval(bodyv);
+                        }
+                        return result;
                     },
                     _ => {
                         panic!("Invalid format. Cannot evaluate it as a symbol or procedure.");

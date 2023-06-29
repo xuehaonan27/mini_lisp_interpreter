@@ -12,11 +12,17 @@ pub fn apply(params: Vec<Value>, env: &EvalEnv) -> Value {
     else {
         match params[0].clone() {
             Value::ProcedureValue(f) => {
-                let args: Vec<Value> = params[1..].iter().cloned().map(|value| env.eval(value)).collect();
+                // let args: Vec<Value> = params[1..].iter().cloned().map(|value| env.eval(value)).collect();
+                let args: Vec<Value> = params[1].to_vector();
                 return f(args, env);
             },
-            Value::LambdaValue(args, body) => {
-                todo!();
+            Value::LambdaValue(params_in_lambda, body, env) => {
+                let env_derived = env.derive(*params_in_lambda, params[1].to_vector());
+                let mut result: Value = Value::NilValue;
+                for bodyv in *body {
+                    result = env_derived.eval(bodyv);
+                }
+                return result;
             },
             _ => panic!("Cannot evaluate the expression as a procedure."),
         }
@@ -253,7 +259,7 @@ pub fn procedure_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
     else {
         match params[0] {
             Value::ProcedureValue(_) => return Value::BooleanValue(true),
-            Value::LambdaValue(_, _) => return Value::BooleanValue(true),
+            Value::LambdaValue(_, _, _) => return Value::BooleanValue(true),
             _ => return Value::BooleanValue(false),
         }
     }
@@ -470,8 +476,19 @@ pub fn map(params: Vec<Value>, env: &EvalEnv) -> Value {
                     args.unwrap().iter().clone().for_each(|arg| results.push(f(vec![arg.clone()], env)));
                     return list(results, env);
                 }
-                Value::LambdaValue(_, _) => {
-                    todo!();
+                Value::LambdaValue(params, body, env_in_lambda) => {
+                    args.unwrap().iter().clone().for_each(|arg| results.push(
+                        {
+                            let args_in_lambda = vec![arg.clone()];
+                            let env_derived = env_in_lambda.derive(*params.clone(), args_in_lambda);
+                            let mut result: Value = Value::NilValue;
+                            for bodyv in *body.clone() {
+                                result = env_derived.eval(bodyv);
+                            }
+                            result
+                        }
+                    ));
+                    return list(results, env);
                 },
                 _ => panic!("Error type."),
             }
@@ -497,7 +514,7 @@ pub fn filter(params: Vec<Value>, env: &EvalEnv) -> Value {
             let mut results: Vec<Value> = Vec::new();
             match params[0].clone() {
                 Value::ProcedureValue(f) => {
-                    for arg in &args.unwrap().clone() {
+                    for arg in args.unwrap() {
                         let result: Value = f(vec![arg.clone()], env);
                         match result {
                             Value::BooleanValue(false) => {},
@@ -506,8 +523,23 @@ pub fn filter(params: Vec<Value>, env: &EvalEnv) -> Value {
                     }
                     return list(results, env);
                 }
-                Value::LambdaValue(_, _) => {
+                /*Value::LambdaValue(_, _) => {
                     todo!();
+                },*/
+                Value::LambdaValue(params, body, env_in_lambda) => {
+                    for arg in args.unwrap() {
+                        let args_in_lambda = vec![arg];
+                        let env_derived = env_in_lambda.derive(*params.clone(), args_in_lambda);
+                        let mut result: Value = Value::NilValue;
+                        for bodyv in *body.clone() {
+                            result = env_derived.eval(bodyv);
+                        }
+                        match result {
+                            Value::BooleanValue(false) => continue,
+                            _ => results.push(result),
+                        }
+                    }
+                    return list(results, env);
                 },
                 _ => panic!("SyntaxError: need a procedure and a list."),
             }
@@ -535,7 +567,20 @@ pub fn reduce(params: Vec<Value>, env: &EvalEnv) -> Value {
                     },
                 }
             },
-            (Value::LambdaValue(_, _), Value::PairValue(_, _)) => todo!(),
+            (Value::LambdaValue(params_in_lambda, body, env_in_lambda), Value::PairValue(car, cdr)) => {
+                match *cdr {
+                    Value::NilValue => return *car,
+                    _ => {
+                        let args: Vec<Value> = vec![*car, reduce(vec![params[0].clone(), *cdr], env)];
+                        let env_derived = env_in_lambda.derive(*params_in_lambda, args);
+                        let mut result: Value = Value::NilValue;
+                        for bodyv in *body.clone() {
+                            result = env_derived.eval(bodyv);
+                        }
+                        return result;
+                    }
+                }
+            },
             _ => panic!("SyntaxError: need a procedure and a list."),
         }
     }
@@ -721,7 +766,8 @@ pub fn eq_q(params: Vec<Value>, env: &EvalEnv) -> Value {
             },
             (Value::ProcedureValue(f0), Value::ProcedureValue(f1)) => 
                 return Value::BooleanValue(std::ptr::eq(&*f0, &*f1)),
-            (Value::LambdaValue(_, _), Value::LambdaValue(_, _)) => todo!(),
+            // 我直接规定, 任何两个lambda表达式都是不一样的! 如何?!
+            (Value::LambdaValue(params_in_lambda_0, body0, env_in_lambda_0), Value::LambdaValue(params_in_lambda_1, body1, env_in_lambda1)) => return Value::BooleanValue(false),
             _ => return Value::BooleanValue(false),
         }
     }

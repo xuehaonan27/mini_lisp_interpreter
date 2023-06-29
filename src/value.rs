@@ -11,7 +11,7 @@ pub enum Value {
     SymbolValue(String),
     PairValue(Box<Value>, Box::<Value>),
     ProcedureValue(Box<BuiltinFn>),
-    LambdaValue(Box<Vec<String>>, Box<Vec<Value>>),
+    LambdaValue(Box<Vec<String>>, Box<Vec<Value>>, EvalEnv),
 }
 pub fn is_integer(num: &f64) -> bool {
     num.abs() < std::f64::EPSILON ||
@@ -28,7 +28,7 @@ impl Debug for Value {
             Self::SymbolValue(s) => write!(f, "SymbolValue {s}"),
             Self::PairValue(_, _) => write!(f, "PairValue {}", self.to_string()),
             Self::ProcedureValue(_) => write!(f, "ProcedureValue"),
-            Self::LambdaValue(_, _) => write!(f, "LambdaValue"),
+            Self::LambdaValue(_, _, _) => write!(f, "LambdaValue"),
         }
     }
 }
@@ -57,9 +57,10 @@ impl ToString for Value {
             Value::ProcedureValue(_f) => {
                 format!("#<procedure>")
             },
-            Value::LambdaValue(params, body) => {
+            Value::LambdaValue(params, body, env) => {
                 let mut params_string: String = String::new();
                 let mut body_string: String = String::new();
+                let mut env_string: String = String::new();
                 for param in &**params {
                     params_string += param.clone().as_str();
                     params_string.push(' ');
@@ -68,30 +69,34 @@ impl ToString for Value {
                     body_string += bodyv.to_string().as_str();
                     body_string.push(' ');
                 }
-                format!("Lambda Expression with param: {} and body: {}", params_string, body_string)
+                for bind in &env.symbol_map {
+                    env_string += format!("({}, {})", bind.0, bind.1.to_string()).as_str();
+                    env_string.push('\n');
+                }
+                format!("Lambda Expression with\nparam: {}\nbody: {}\nenv: {}", params_string, body_string, env_string)
             },
             Value::PairValue(box_car, box_cdr) => {
                 let mut s: String = format!("({} ", box_car.to_string());
                 match &**box_cdr {
-                    v @ Value::BooleanValue(_b) => {
+                    v @ Value::BooleanValue(_) => {
                         format!("{}. {})", s, v.to_string())
                     },
-                    v @ Value::NumericValue(_n) => {
+                    v @ Value::NumericValue(_) => {
                         format!("{}. {}", s, v.to_string())
                     }
-                    v @ Value::StringValue(_string) => {
+                    v @ Value::StringValue(_) => {
                         format!("{}. {}", s, v.to_string())
                     }
-                    v @ Value::SymbolValue(_string) => {
+                    v @ Value::SymbolValue(_) => {
                         format!("{}. {}", s, v.to_string())
                     }
-                    v @ Value::ProcedureValue(_string) => {
+                    v @ Value::ProcedureValue(_) => {
                         format!("{}. {}", s, v.to_string())
                     }
-                    v @ Value::LambdaValue(_string1, _string2) => {
+                    v @ Value::LambdaValue(_, _, _) => {
                         format!("{}. {}", s, v.to_string())
                     }
-                    v @ Value::PairValue(_car, _cdr) => {
+                    v @ Value::PairValue(_, _) => {
                         let mut rs = v.to_string();
                         rs.remove(0);
                         format!("{}{}", s, rs)
@@ -125,7 +130,7 @@ impl Hash for Value {
             Value::SymbolValue(s) => s.hash(state),
             v @ Value::PairValue(_car, _cdr) => v.to_string().hash(state),
             Value::ProcedureValue(f) => (**f as *const usize).hash(state),
-            v @ Value::LambdaValue(_params, _body) => v.to_string().hash(state),
+            v @ Value::LambdaValue(_, _, _) => v.to_string().hash(state),
         }
     }
 }
