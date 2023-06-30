@@ -4,8 +4,8 @@ use std::fmt;
 
 // 自定义错误类型
 #[derive(Debug)]
-struct ErrorToVector {
-    message: String,
+pub struct ErrorToVector {
+    pub message: String,
 }
 impl fmt::Display for ErrorToVector {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -20,7 +20,7 @@ impl Clone for ErrorToVector {
 }
 
 #[derive(Debug)]
-struct ErrorEval {
+pub struct ErrorEval {
     message: String,
 }
 impl fmt::Display for ErrorEval {

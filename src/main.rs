@@ -1,14 +1,15 @@
 use std::io;
+use std::io::Write;
 mod tokenizer;
 mod value;
 mod parse;
 mod eval_env;
 mod special_forms;
 mod builtins;
+mod error;
 use crate::eval_env::EvalEnv;
 use crate::tokenizer::Tokenizer;
 use crate::parse::Parser;
-use value::Value;
 fn main() {
     /*let a = Value::NumericValue(42.0);
     let b = Value::BooleanValue(false);
@@ -35,16 +36,22 @@ fn main() {
     let vec = f.to_vector();*/
     let eval_env: EvalEnv = EvalEnv::new();
     // println!("{:?}", vec);
-    let mut input = String::new();
-    io::stdin().read_line(&mut input).unwrap();
-    let mut tokenizer = Tokenizer::new(input);
-    let tokens = tokenizer.tokenize();
-    // println!("{:?}", tokens);
-    let mut parser = Parser::new(tokens);
-    let value = parser.parse();
-    //println!("{}", value.to_string());
-    //println!("{:?}", value.to_vector());
-    let result = eval_env.eval(value);
-    println!("{}", result.to_string());
-
+    loop {
+        print!(">>> ");
+        io::stdout().flush().unwrap();
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).unwrap();
+        let mut tokenizer = Tokenizer::new(input);
+        let tokens = tokenizer.tokenize();
+        // println!("{:?}", tokens);
+        let mut parser = Parser::new(tokens);
+        let value = parser.parse();
+        //println!("{}", value.to_string());
+        //println!("{:?}", value.to_vector());
+        let result = eval_env.eval(value);
+        println!("{}", result.unwrap_or_else(|e| {
+            eprintln!("Error: {}", e);
+            panic!()
+        }).to_string());
+    }
 }

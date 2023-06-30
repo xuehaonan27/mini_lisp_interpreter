@@ -5,6 +5,7 @@ use crate::value::Value;
 use crate::special_forms::*;
 use crate::builtins::*;
 use crate::value::BuiltinFn;
+use crate::error::ErrorEval;
 #[derive(Clone)]
 pub struct EvalEnv{
     pub symbol_map: RefCell<HashMap<String, Value>>,
@@ -108,9 +109,10 @@ impl EvalEnv {
         let symbol_map = RefCell::new(symbol_map);
         Self {symbol_map, parent, special_forms, builtin_procs}
     }
-    pub fn find_binding(&self, name: &String) -> Option<&Value> {
+    pub fn find_binding(&self, name: &String) -> Option<Value> {
         if self.symbol_map.borrow().contains_key(name) {
-            self.symbol_map.borrow().get(name)
+            // Some(self.symbol_map.borrow().get(name).unwrap().clone())
+            self.symbol_map.borrow().get(name).cloned()
         }
         else {
             if self.parent.is_none() {
@@ -124,36 +126,37 @@ impl EvalEnv {
     /// 将待传入参数由Value::PairValue类型转为向量并先在当前环境中逐个求值
     /// 由于其内部调用的eval是求值务必求到尽头
     /// 所以最终返回的向量包含的值必然都是
-    fn eval_list(&self, expr: Value) -> Vec<Value> {
+    /* fn eval_list(&self, expr: Value) -> Vec<Value> {
         let mut result: Vec<Value> = Vec::new();
-        let v: Vec<Value> = expr.to_vector();
-        v.iter().for_each(|value| { result.push(self.eval(value.clone()));});
+        let v: Vec<Value> = expr.to_vector().expect("Corruption when converting a value to vector in fn <eval_list>");
+        v.iter().for_each(|value| { result.push(self.eval(value.clone()).expect("Corruption when evaluating a list in fn <eval_list>"));});
         result
-    }
-    pub fn eval(&self, expr: Value) -> Value {
+    }*/
+    pub fn eval(&self, expr: Value) -> Result<Value, ErrorEval> {
         match expr {
-            Value::BooleanValue(_) => return expr,
-            Value::NumericValue(_) => return expr,
-            Value::StringValue(_) => return expr,
+            Value::BooleanValue(_) => return Ok(expr),
+            Value::NumericValue(_) => return Ok(expr),
+            Value::StringValue(_) => return Ok(expr),
             Value::NilValue => panic!("Evaluating nil is prohibited."),
-            Value::ProcedureValue(_) => return expr,
-            Value::LambdaValue(_, _, _) => return expr,
+            Value::ProcedureValue(_) => return Ok(expr),
+            Value::LambdaValue(_, _, _) => return Ok(expr),
             Value::SymbolValue(s) => {
-                // return self.find_binding(&s).expect(&format!("Variable {} not defined.", s)).clone();
-
                 let item1 =  self.find_binding(&s);
                 if item1.is_some() {
-                    return item1.unwrap().clone();
+                    return Ok(item1.unwrap().clone());
                 }
                 else {
+                    if s == "else".to_string() {
+                        return Ok(Value::SymbolValue("else".to_string()));
+                    }
                     let item2 = self.builtin_procs.get(&s);
                     if item2.is_some() {
-                        return Value::ProcedureValue(Box::new(*item2.unwrap()));
+                        return Ok(Value::ProcedureValue(Box::new(*item2.unwrap())));
                     }
                     else {
                         let item3 = self.special_forms.get(&s);
                         if item3.is_some() {
-                            return Value::ProcedureValue(Box::new(*item3.unwrap()));
+                            return Ok(Value::ProcedureValue(Box::new(*item3.unwrap())));
                         }
                         else {
                             panic!("Variable {s} not defined.");
@@ -162,17 +165,22 @@ impl EvalEnv {
                 }
             }
             exprs @ Value::PairValue(_, _) => {
-                let v: Vec<Value> = exprs.to_vector();
+                let v: Vec<Value> = exprs.to_vector().expect("Corruption when evaluating a list in fn <eval>");
                 match &v[0] {
                     Value::SymbolValue(s) => {
                         match self.find_binding(s) {
                             None => {},
                             Some(Value::ProcedureValue(f)) => {
-                                let args: Vec<Value> = v[1..].iter().cloned().map(|value| self.eval(value)).collect();
-                                return f(args, self);
+                                let args: Vec<Value> = v[1..].iter().cloned().map(|value| self.eval(value).expect("Corruption when evaluating a value in fn <eval>")).collect();
+                                return Ok(f(args, self));
                             },
-                            Some(Value::LambdaValue(_, _, _)) => {
-                                todo!();
+                            Some(Value::LambdaValue(params_in_lambda, body, env_in_lambda)) => {
+                                let env_derived: EvalEnv = env_in_lambda.derive(*params_in_lambda, v[1..].to_vec());
+                                let mut result: Value = Value::NilValue;
+                                for bodyv in *body {
+                                    result = env_derived.eval(bodyv).expect("Corruption when evaluating a value in fn <eval> part <lambda>");
+                                }
+                                return Ok(result);
                             },
                             _ => panic!("Invalid format."),
                         }
@@ -180,11 +188,11 @@ impl EvalEnv {
                             if *s == "unquote".to_string() {
                                 panic!("Calling unquote outside quasiquote is an undefined behavior.");
                             }
-                            return self.special_forms.get(s).unwrap()(v[1..].to_vec(), self);
+                            return Ok(self.special_forms.get(s).unwrap()(v[1..].to_vec(), self));
                         }
                         else if self.builtin_procs.contains_key(s) {
-                            let args: Vec<Value> = v[1..].iter().cloned().map(|value| self.eval(value)).collect();
-                            return self.builtin_procs.get(s).unwrap()(args, self);
+                            let args: Vec<Value> = v[1..].iter().cloned().map(|value| self.eval(value).expect("Corruption when evaluating a value in fn <eval>")).collect();
+                            return Ok(self.builtin_procs.get(s).unwrap()(args, self));
                         }
                         else {
                             panic!("Name {s} not defined.");
@@ -194,7 +202,7 @@ impl EvalEnv {
                     Value::PairValue(_, _) => {
                         let mut new_vec: Vec<Value> = Vec::new();
                         v.iter().for_each(|value| {
-                            new_vec.push(self.eval(value.clone()));
+                            new_vec.push(self.eval(value.clone()).expect("Corruption when evaluating a value in fn <eval>"));
                         });
                         let new_expr: Value = list(new_vec, self);
                         self.eval(new_expr)
@@ -202,15 +210,15 @@ impl EvalEnv {
                     Value::ProcedureValue(f) => {
                         // let proc: Value = self.eval(v[0].clone());
                         // self.apply(proc, v[1..].to_vec())
-                        f(v[1..].to_vec(), self)
+                        Ok(f(v[1..].to_vec(), self))
                     },
                     Value::LambdaValue(params, body, env) => {
                         let env_derived = env.derive(*params.clone(), v[1..].to_vec());
                         let mut result: Value = Value::NilValue;
                         for bodyv in *body.clone() {
-                            result = env_derived.eval(bodyv);
+                            result = env_derived.eval(bodyv).expect("Corruption when evaluating a value in fn <eval>");
                         }
-                        return result;
+                        return Ok(result);
                     },
                     _ => {
                         panic!("Invalid format. Cannot evaluate it as a symbol or procedure.");
@@ -219,7 +227,7 @@ impl EvalEnv {
             },
         }
     }
-    fn apply(&self, proc: Value, args: Vec<Value>) -> Value {
+    /* fn apply(&self, proc: Value, args: Vec<Value>) -> Value {
         todo!();
-    }
+    }*/
 }

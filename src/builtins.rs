@@ -1,26 +1,26 @@
-use crate::value::{Value, is_integer, BuiltinFn};
+use crate::value::{Value, is_integer};
 use crate::eval_env::EvalEnv;
 use std::process;
 use std::panic;
 pub fn apply(params: Vec<Value>, env: &EvalEnv) -> Value {
     if params.len() < 2{
-        panic!("SyntaxError: Missing argument.");
+        panic!("SyntaxError: Missing argument in procedure <apply>.");
     }
     else if params.len() > 2 {
-        panic!("SyntaxError: Too many argument");
+        panic!("SyntaxError: Too many argument in procedure <apply>.");
     }
     else {
         match params[0].clone() {
             Value::ProcedureValue(f) => {
                 // let args: Vec<Value> = params[1..].iter().cloned().map(|value| env.eval(value)).collect();
-                let args: Vec<Value> = params[1].to_vector();
+                let args: Vec<Value> = params[1].to_vector().expect("Corruption when converting a value to vector in procedure <apply>.");
                 return f(args, env);
             },
             Value::LambdaValue(params_in_lambda, body, env) => {
-                let env_derived = env.derive(*params_in_lambda, params[1].to_vector());
+                let env_derived = env.derive(*params_in_lambda, params[1].to_vector().expect("Corruption when converting a value to vector in procedure <apply>."));
                 let mut result: Value = Value::NilValue;
                 for bodyv in *body {
-                    result = env_derived.eval(bodyv);
+                    result = env_derived.eval(bodyv).expect("Corruption when evaluating a value in procedure <apply>.");
                 }
                 return result;
             },
@@ -89,7 +89,7 @@ pub fn eval(params: Vec<Value>, env: &EvalEnv) -> Value {
         panic!("SyntaxError: Too many argument in procedure <eval>.");
     }
     else {
-        env.eval(params[0].clone())
+        env.eval(params[0].clone()).expect("Corruption when evaluating a value in procedure <eval>.")
     }
 }
 /// 非安全退出. 
@@ -340,9 +340,7 @@ pub fn append(params: Vec<Value>, env: &EvalEnv) -> Value {
             Value::NilValue => (),
             Value::PairValue(_, _) => {
                 // 注意这里可能逻辑实现有错误, 如果发生错误请立刻改正为忠实翻译
-                let result = panic::catch_unwind(|| {
-                    param.to_vector()
-                });
+                let result = param.to_vector();
                 if result.is_ok() {
                     ret.append(result.unwrap().as_mut());
                 }
@@ -367,9 +365,7 @@ pub fn push(params: Vec<Value>, env: &EvalEnv) -> Value {
             Value::NilValue => (),
             Value::PairValue(_, _) => {
                 // 注意这里可能逻辑实现有错误, 如果发生错误请立刻改正为忠实翻译
-                let result = panic::catch_unwind(|| {
-                    param.to_vector()
-                });
+                let result = param.to_vector();
                 if result.is_ok() {
                     ret.append(result.unwrap().as_mut());
                 }
@@ -435,7 +431,7 @@ pub fn length(params: Vec<Value>, _env: &EvalEnv) -> Value {
     else {
         match params[0] {
             Value::PairValue(_, _) => {
-                let vec: Vec<Value> = params[0].to_vector();
+                let vec: Vec<Value> = params[0].to_vector().expect("Fail to convert params into vector in procudure <length>.");
                 if vec.len() == 1  {
                     match vec[0] {
                         Value::NilValue => return Value::NumericValue(0f64),
@@ -466,9 +462,7 @@ pub fn map(params: Vec<Value>, env: &EvalEnv) -> Value {
         panic!("SyntaxError: Too many argument in procedure <map>.");
     }
     else {
-        let args = panic::catch_unwind(|| {
-            params[1].to_vector()
-        });
+        let args = params[1].to_vector();
         if args.is_ok() {
             let mut results: Vec<Value> = Vec::new();
             match params[0].clone() {
@@ -483,7 +477,7 @@ pub fn map(params: Vec<Value>, env: &EvalEnv) -> Value {
                             let env_derived = env_in_lambda.derive(*params.clone(), args_in_lambda);
                             let mut result: Value = Value::NilValue;
                             for bodyv in *body.clone() {
-                                result = env_derived.eval(bodyv);
+                                result = env_derived.eval(bodyv).expect("Corruption when evaluating a value in procedure <map>");
                             }
                             result
                         }
@@ -507,9 +501,7 @@ pub fn filter(params: Vec<Value>, env: &EvalEnv) -> Value {
         panic!("SyntaxError: Too many argument in procedure <filter>.");
     }
     else {
-        let args = panic::catch_unwind(|| {
-            params[1].to_vector()
-        });
+        let args = params[1].to_vector();
         if args.is_ok() {
             let mut results: Vec<Value> = Vec::new();
             match params[0].clone() {
@@ -532,7 +524,7 @@ pub fn filter(params: Vec<Value>, env: &EvalEnv) -> Value {
                         let env_derived = env_in_lambda.derive(*params.clone(), args_in_lambda);
                         let mut result: Value = Value::NilValue;
                         for bodyv in *body.clone() {
-                            result = env_derived.eval(bodyv);
+                            result = env_derived.eval(bodyv).expect("Corruption when evaluating a value in procedure <filter>");
                         }
                         match result {
                             Value::BooleanValue(false) => continue,
@@ -575,7 +567,7 @@ pub fn reduce(params: Vec<Value>, env: &EvalEnv) -> Value {
                         let env_derived = env_in_lambda.derive(*params_in_lambda, args);
                         let mut result: Value = Value::NilValue;
                         for bodyv in *body.clone() {
-                            result = env_derived.eval(bodyv);
+                            result = env_derived.eval(bodyv).expect("Corruption when evaluating a value in procedure <reduce>");
                         }
                         return result;
                     }
@@ -781,9 +773,7 @@ pub fn not(params: Vec<Value>, env: &EvalEnv) -> Value {
         panic!("SyntaxError: Too many argument in procedure <not>.");
     }
     else {
-        let result = std::panic::catch_unwind(||
-            env.eval(params[0].clone())
-        );
+        let result = env.eval(params[0].clone());
         if result.is_ok() {
             match result.unwrap() {
                 Value::BooleanValue(false) => return Value::BooleanValue(true),

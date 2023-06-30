@@ -1,4 +1,5 @@
 use std::hash::{Hash,Hasher};
+use crate::error:: ErrorToVector;
 pub type BuiltinFn = fn(Vec<Value>, env: &EvalEnv) -> Value;
 
 use std::fmt::Debug;
@@ -159,23 +160,28 @@ use std::rc::Rc;
 
 use crate::eval_env::EvalEnv;
 impl Value {
-    pub fn to_vector(&self) -> Vec<Self> {
-        fn to_vector_recursive(expr: &Value, vec: &mut Vec<Rc<Value>>) {
+    pub fn to_vector(&self) -> Result<Vec<Self>, ErrorToVector> {
+        fn to_vector_recursive(expr: &Value, vec: &mut Vec<Rc<Value>>) -> Result<(), ErrorToVector>{
             match expr {
-                Value::BooleanValue(_) => vec.push(Rc::new(expr.clone())),
-                Value::NumericValue(_) => vec.push(Rc::new(expr.clone())),
-                Value::StringValue(_) => vec.push(Rc::new(expr.clone())),
-                Value::NilValue => (),
-                Value::SymbolValue(_) => vec.push(Rc::new(expr.clone())),
+                Value::BooleanValue(_) => { vec.push(Rc::new(expr.clone())); Ok(()) },
+                Value::NumericValue(_) => { vec.push(Rc::new(expr.clone())); Ok(()) },
+                Value::StringValue(_) => { vec.push(Rc::new(expr.clone())); Ok(()) },
+                Value::NilValue => Ok(()),
+                Value::SymbolValue(_) => { vec.push(Rc::new(expr.clone())); Ok(()) },
                 Value::PairValue(car, cdr) => {
                     vec.push(Rc::new(*(*car).clone()));
-                    to_vector_recursive(cdr, vec);
+                    to_vector_recursive(cdr, vec)?;
+                    Ok(())
                 }
-                _ => panic!("Invalid format when converting pairvalue to vector."),
+                // _ => panic!("Invalid format when converting pairvalue to vector."),
+                _ => Err(ErrorToVector{message: String::from("Invalid format when converting pairvalue to vector.")}),
             }
         }
         let mut vec: Vec<Rc<Value>> = Vec::new();
-        to_vector_recursive(self, &mut vec);
-        vec.iter().cloned().map(|v| (*v).clone()).collect()
+        let result = to_vector_recursive(self, &mut vec);
+        match result {
+            Ok(_) => return Ok(vec.iter().cloned().map(|v| (*v).clone()).collect()),
+            Err(err) => return Err(err),
+        }
     }
 }
