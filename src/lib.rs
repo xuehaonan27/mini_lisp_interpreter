@@ -5,3 +5,4 @@ pub mod tokenizer;
 pub mod builtins;
 pub mod special_forms;
 pub mod error;
+pub mod test_machine;
