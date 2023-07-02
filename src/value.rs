@@ -71,8 +71,14 @@ impl ToString for Value {
                     body_string.push(' ');
                 }
                 for bind in env.symbol_map.borrow().clone() {
-                    env_string += format!("({}, {})", bind.0, bind.1.to_string()).as_str();
-                    env_string.push('\n');
+                    match bind.1 {
+                        Value::ProcedureValue(_) => continue,
+                        Value::LambdaValue(_, _, _) => continue,
+                        _ => {
+                            env_string += format!("({}, {})", bind.0, bind.1.to_string()).as_str();
+                            env_string.push('\n');
+                        },
+                    }
                 }
                 format!("Lambda Expression with\nparam: {}\nbody: {}\nenv: {}", params_string, body_string, env_string)
             },

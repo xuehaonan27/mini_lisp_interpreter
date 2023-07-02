@@ -34,3 +34,11 @@ impl Clone for ErrorEval {
         ErrorEval { message: self.message.clone() }
     }
 }
+#[derive(Debug, PartialEq)]
+pub enum ErrorRead {
+    KeyboardInterrupt,
+    OpenFileFailure,
+    SyntaxFailure,
+    EmptyLine,
+    StreamFailure,
+}

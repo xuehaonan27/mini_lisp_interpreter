@@ -7,9 +7,12 @@ mod eval_env;
 mod special_forms;
 mod builtins;
 mod error;
+mod reader_interact;
+mod command_line;
 use crate::eval_env::EvalEnv;
 use crate::tokenizer::Tokenizer;
 use crate::parse::Parser;
+use crate::reader_interact::ReaderInteract;
 fn main() {
     /*let a = Value::NumericValue(42.0);
     let b = Value::BooleanValue(false);
@@ -34,7 +37,7 @@ fn main() {
     // println!("{}", f.to_string());
 
     let vec = f.to_vector();*/
-    let eval_env: EvalEnv = EvalEnv::new();
+    /*let eval_env: EvalEnv = EvalEnv::new();
     // println!("{:?}", vec);
     loop {
         print!(">>> ");
@@ -53,5 +56,8 @@ fn main() {
             eprintln!("Error: {}", e);
             panic!()
         }).to_string());
-    }
+    }*/
+
+    let mut reader_interact: ReaderInteract = ReaderInteract::new();
+    reader_interact.call();
 }

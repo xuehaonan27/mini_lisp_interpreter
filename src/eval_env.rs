@@ -175,7 +175,11 @@ impl EvalEnv {
                                 return Ok(f(args, self));
                             },
                             Some(Value::LambdaValue(params_in_lambda, body, env_in_lambda)) => {
-                                let env_derived: EvalEnv = env_in_lambda.derive(*params_in_lambda, v[1..].to_vec());
+                                // println!("Calling a Lambda evaluation.");
+                                // v[1..].iter().for_each(|value| println!("{:?}", value));
+                                let args: Vec<Value> = v[1..].iter().map(|value| self.eval(value.clone()).expect("Corruption when evaluating a value in env.eval: lambda.")).collect();
+                                // let env_derived: EvalEnv = env_in_lambda.derive(*params_in_lambda, v[1..].to_vec());
+                                let env_derived: EvalEnv = env_in_lambda.derive(*params_in_lambda, args);
                                 let mut result: Value = Value::NilValue;
                                 for bodyv in *body {
                                     result = env_derived.eval(bodyv).expect("Corruption when evaluating a value in fn <eval> part <lambda>");
