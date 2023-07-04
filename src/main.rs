@@ -1,5 +1,4 @@
 use std::io;
-use std::io::Write;
 mod tokenizer;
 mod value;
 mod parse;
@@ -8,11 +7,13 @@ mod special_forms;
 mod builtins;
 mod error;
 mod reader_interact;
+mod reader_file;
 mod command_line;
-use crate::eval_env::EvalEnv;
-use crate::tokenizer::Tokenizer;
-use crate::parse::Parser;
 use crate::reader_interact::ReaderInteract;
+use reader_file::ReaderFile;
+use crate::eval_env::EvalEnv;
+use crate::parse::Parser;
+
 fn main() {
     /*let a = Value::NumericValue(42.0);
     let b = Value::BooleanValue(false);
@@ -60,4 +61,7 @@ fn main() {
 
     let mut reader_interact: ReaderInteract = ReaderInteract::new();
     reader_interact.call();
+    // readline();
+    // let mut reader_file: ReaderFile = ReaderFile::new();
+    // reader_file.call();
 }

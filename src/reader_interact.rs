@@ -20,7 +20,7 @@ pub struct ReaderInteract {
 
 impl ReaderInteract {
     pub fn new() -> Self {
-        Self{
+        Self {
             space_buffer: Vec::new(), 
             buffer_modify_pos: -1, 
             is_inside_quote: false, 
@@ -49,11 +49,11 @@ impl ReaderInteract {
         for ch in self.templine.chars() {
             // println!("{}", ch);
             match ch {
-                /*'\n' => {
+                '\n' => {
                     if self.is_inside_comment { self.is_inside_comment = false; continue; }
-                },*/
+                },
                 '(' => {
-                    // if self.is_inside_comment { continue; }
+                    if self.is_inside_comment { continue; } // Added
                     if self.is_after_slash { self.is_after_slash = false; }
                     if self.is_inside_quote { self.space_buffer[self.buffer_modify_pos as usize] += 1; } // 检查bound
                     else { 
@@ -63,7 +63,7 @@ impl ReaderInteract {
                     }
                 },
                 ')' => {
-                    // if self.is_inside_comment { continue; }
+                    if self.is_inside_comment { continue; } // Added
                     if self.is_after_slash { self.is_after_slash = false; }
                     if self.is_inside_quote { self.space_buffer[self.buffer_modify_pos as usize] += 1; } // 检查bound
                     else {
@@ -81,12 +81,16 @@ impl ReaderInteract {
                     }
                 },
                 ';' => {
-                    // if self.is_inside_comment { continue; }
+                    if self.is_inside_comment { continue; } // Added 
+                    else { self.is_inside_comment = true; } // Added
                     if self.is_after_slash { self.is_after_slash = false; }
                     if self.is_inside_quote { self.space_buffer[self.buffer_modify_pos as usize] += 1; } // 检查bound
-                    else { todo!(); }
+                    else {
+                        self.is_inside_comment = true;
+                    }
                 },
                 '"' => {
+                    if self.is_inside_comment { continue; } // Added
                     if self.is_after_slash { self.is_after_slash = false; }
                     else {
                         if self.is_inside_quote { self.is_inside_quote = false; }
@@ -95,6 +99,7 @@ impl ReaderInteract {
                     self.space_buffer[self.buffer_modify_pos as usize] += 1; // 检查bound
                 },
                 '\\' => {
+                    if self.is_inside_comment { continue; } // Added
                     if self.is_inside_quote {
                         if self.is_after_slash { self.is_after_slash = false; }
                         else { self.is_after_slash = true; }
@@ -102,10 +107,12 @@ impl ReaderInteract {
                     self.space_buffer[self.buffer_modify_pos as usize] += 1; // 检查bound
                 },
                 'n' => {
+                    if self.is_inside_comment { continue; } // Added
                     if self.is_inside_quote && self.is_after_slash { self.is_after_slash = false; }
                     self.space_buffer[self.buffer_modify_pos as usize] += 1; // 检查bound
                 },
                 _ => {
+                    if self.is_inside_comment { continue; } // Added
                     if self.buffer_modify_pos == -1 { break; }
                     self.space_buffer[self.buffer_modify_pos as usize] += 1; // 检查bound
                 },

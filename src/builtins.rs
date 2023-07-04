@@ -484,7 +484,7 @@ pub fn map(params: Vec<Value>, env: &EvalEnv) -> Value {
                     ));
                     return list(results, env);
                 },
-                _ => panic!("Error type."),
+                _ => panic!("Error type in procedure <map>: need a procedure."),
             }
         }
         else {
@@ -492,7 +492,49 @@ pub fn map(params: Vec<Value>, env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn map_expand(params: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
+pub fn map_expand(params: Vec<Value>, env: &EvalEnv) -> Value {
+    if params.len() < 2 {
+        panic!("SyntaxError: Missing argument in procedure <map_expand>.");
+    }
+    let mut size: Option<usize> = None;
+    let mut vecs: Vec<Vec<Value>> = Vec::new();
+    let mut results: Vec<Value> = Vec::new();
+    params[1..].iter().for_each(|param|
+        match param {
+            Value::PairValue(_, _) => {
+                let vec = param.to_vector().expect("Corruption when converting a value to vector in procedure <map_expand>.");
+                if size.is_none() { size = Some(vec.len()); vecs.push(vec);}
+                else if size != Some(vec.len()) {
+                    panic!("Error size in procedure <map_expand>: lists should have the same size.");
+                }
+                else { vecs.push(vec); }
+            },
+            _ => panic!("Error type in procedure <map_expand>: need a procedure."),
+        }
+    );
+    for i in 0..size.unwrap() {
+        let mut temp_args: Vec<Value> = Vec::new();
+        vecs.iter().for_each(|vec|
+            temp_args.push(env.eval(vec[i].clone()).expect("Corruption when evaluating a value in procedure <map_expand>."))
+        );
+        match params[0].clone() {
+            Value::ProcedureValue(f) => {
+                let result = f(temp_args, env);
+                results.push(result);
+            },
+            Value::LambdaValue(params_in_lambda, body, env_in_lambda) => {
+                let env_derived: EvalEnv = env_in_lambda.derive(*params_in_lambda, temp_args);
+                let mut result: Value = Value::NilValue;
+                for bodyv in *body {
+                    result = env_derived.eval(bodyv).expect("Corruption when evaluating a value in fn <eval> part <lambda>");
+                }
+                results.push(result);
+            },
+            _ => panic!("Error type in procedure <map_expand>: need a procedure."),
+        }
+    }
+    list(results, env)
+}
 pub fn filter(params: Vec<Value>, env: &EvalEnv) -> Value {
     if params.len() < 2 {
         panic!("SyntaxError: Missing argument in procedure <filter>.");
@@ -759,12 +801,22 @@ pub fn eq_q(params: Vec<Value>, env: &EvalEnv) -> Value {
             (Value::ProcedureValue(f0), Value::ProcedureValue(f1)) => 
                 return Value::BooleanValue(std::ptr::eq(&*f0, &*f1)),
             // 我直接规定, 任何两个lambda表达式都是不一样的! 如何?!
-            (Value::LambdaValue(params_in_lambda_0, body0, env_in_lambda_0), Value::LambdaValue(params_in_lambda_1, body1, env_in_lambda1)) => return Value::BooleanValue(false),
+            (Value::LambdaValue(_params_in_lambda_0, _body0, _env_in_lambda_0), Value::LambdaValue(_params_in_lambda_1, _body1, _env_in_lambda1)) => return Value::BooleanValue(false),
             _ => return Value::BooleanValue(false),
         }
     }
 }
-pub fn equal_q(params: Vec<Value>, env: &EvalEnv) -> Value { todo!(); }
+pub fn equal_q(params: Vec<Value>, _env: &EvalEnv) -> Value {
+    if params.len() < 2 {
+        panic!("SyntaxError: Missing argument in procedure <equal?>.");
+    }
+    else if params.len() > 2 {
+        panic!("SyntaxError: Too many argument in procedure <equal?>.");
+    }
+    else {
+        return Value::BooleanValue(params[0].to_string() == params[1].to_string());
+    }
+}
 pub fn not(params: Vec<Value>, env: &EvalEnv) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <not>.");
@@ -917,6 +969,6 @@ pub fn zero_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn sort(params: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn sort(_params: Vec<Value>, _env: &EvalEnv) -> Value {
     todo!();
 }

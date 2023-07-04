@@ -37,8 +37,10 @@ impl Clone for ErrorEval {
 #[derive(Debug, PartialEq)]
 pub enum ErrorRead {
     KeyboardInterrupt,
-    OpenFileFailure,
+    FileOpenError,
     SyntaxFailure,
     EmptyLine,
     StreamFailure,
+    Utf8ConversionError,
+    EOF,
 }
