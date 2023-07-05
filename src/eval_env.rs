@@ -94,7 +94,7 @@ impl EvalEnv {
         let parent: Option<Rc<EvalEnv>> = None;
         Self {symbol_map, parent, special_forms, builtin_procs}
     }
-    pub fn derive(&self, params: Vec<String>, args: Vec<Value>) -> Self {
+    pub fn derive(self: Rc<EvalEnv>, params: Vec<String>, args: Vec<Value>) -> Self {
         if params.len() < args.len() {
             panic!("Too many parameters.");
         }
@@ -104,7 +104,7 @@ impl EvalEnv {
         let special_forms: HashMap<String, SpecialForm> = self.special_forms.clone();
         let builtin_procs: HashMap<String, BuiltinFn> = self.builtin_procs.clone();
         // let parent: Rc<Option<EvalEnv>> = Rc::new(Some(self.clone()));
-        let parent: Option<Rc<EvalEnv>> = Some(Rc::new(self.clone())); // WARNING!!!!!
+        let parent: Option<Rc<EvalEnv>> = Some(Rc::clone(&self)); // WARNING!!!!!
         let mut symbol_map: HashMap<String, Value> = HashMap::new();
         for (key, value) in params.iter().zip(args.iter()) {
             symbol_map.insert(key.clone(), value.clone());
@@ -259,7 +259,8 @@ impl EvalEnv {
                         Ok(f(v[1..].to_vec(), Rc::clone(&self)))
                     },
                     Value::LambdaValue(params, body, env) => {
-                        let env_derived: Rc<EvalEnv> = env.derive(*params.clone(), v[1..].to_vec()).into();
+                        // let env_derived: Rc<EvalEnv> = env.derive(*params.clone(), v[1..].to_vec()).into();
+                        let env_derived: Rc<EvalEnv> = env.clone().derive(*params.clone(), v[1..].to_vec()).into();
                         let mut result: Value = Value::NilValue;
                         for bodyv in *body.clone() {
                             result = env_derived.clone().eval(bodyv).expect("Corruption when evaluating a value in fn <eval>");

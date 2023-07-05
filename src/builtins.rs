@@ -475,7 +475,7 @@ pub fn map(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
                     args.unwrap().iter().clone().for_each(|arg| results.push(
                         {
                             let args_in_lambda = vec![arg.clone()];
-                            let env_derived: Rc<EvalEnv> = env_in_lambda.derive(*params.clone(), args_in_lambda).into();
+                            let env_derived: Rc<EvalEnv> = env_in_lambda.clone().derive(*params.clone(), args_in_lambda).into();
                             let mut result: Value = Value::NilValue;
                             for bodyv in *body.clone() {
                                 result = env_derived.clone().eval(bodyv).expect("Corruption when evaluating a value in procedure <map>");
@@ -564,7 +564,7 @@ pub fn filter(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
                 Value::LambdaValue(params, body, env_in_lambda) => {
                     for arg in args.unwrap() {
                         let args_in_lambda = vec![arg];
-                        let env_derived: Rc<EvalEnv> = env_in_lambda.derive(*params.clone(), args_in_lambda).into();
+                        let env_derived: Rc<EvalEnv> = env_in_lambda.clone().derive(*params.clone(), args_in_lambda).into();
                         let mut result: Value = Value::NilValue;
                         for bodyv in *body.clone() {
                             result = env_derived.clone().eval(bodyv).expect("Corruption when evaluating a value in procedure <filter>");
