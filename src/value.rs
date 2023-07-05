@@ -1,6 +1,6 @@
 use std::hash::{Hash,Hasher};
 use crate::error:: ErrorToVector;
-pub type BuiltinFn = fn(Vec<Value>, env: Rc<EvalEnv>) -> Value;
+pub type BuiltinFn = fn(Vec<Value>, Rc<EvalEnv>) -> Value;
 
 use std::fmt::Debug;
 #[derive(Clone)]

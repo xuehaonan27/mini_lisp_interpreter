@@ -1,10 +1,13 @@
 use std::fs::File;
+use std::io::Write;
+use std::result;
 use crate::error::ErrorRead;
 use crate::EvalEnv;
 use crate::tokenizer::Tokenizer;
 use crate::Parser;
 use crate::error::ErrorEval;
 use crate::io::BufReader;
+use std::io::BufWriter;
 use std::io::BufRead;
 use std::rc::Rc;
 pub struct ReaderFile {
@@ -17,10 +20,19 @@ pub struct ReaderFile {
     env: Rc<EvalEnv>,
     enable: bool,
     have_output_file: bool,
+    input_file_name: Option<String>,
+    output_file_name: Option<String>,
 }
 
 impl ReaderFile{
-    pub fn new() -> Self {
+    pub fn new(input_file_name: Option<String>, output_file_name: Option<String>) -> Self {
+        let have_output_file: bool;
+        if output_file_name.is_none() {
+            have_output_file = false;
+        }
+        else {
+            have_output_file = true;
+        }
         Self {
             left_parenthesis_count: 0,
             is_inside_quote: false, 
@@ -30,18 +42,20 @@ impl ReaderFile{
             line: String::new(),
             env: Rc::new(EvalEnv::new()),
             enable: false,
-            have_output_file: false,
+            have_output_file,
+            input_file_name,
+            output_file_name,
         }
     }
     fn open_input_file(&self) -> Result<BufReader<File>, ErrorRead> {
-        let file = File::open("file/test.txt").map_err(|_| ErrorRead::FileOpenError)?;
+        let file = File::open(self.input_file_name.as_ref().unwrap()).map_err(|_| ErrorRead::FileOpenError)?;
         let reader = BufReader::new(file);
         return Ok(reader);
     }
-    fn open_output_file(&mut self) -> Result<File, ErrorRead> {
-        let file = File::create("file/output.txt").map_err(|_| ErrorRead::FileOpenError)?;
-        self.have_output_file = true;
-        return Ok(file);
+    fn open_output_file(&mut self) -> Result<BufWriter<File>, ErrorRead> {
+        let file = File::create(self.output_file_name.as_ref().unwrap()).map_err(|_| ErrorRead::FileOpenError)?;
+        let writer = BufWriter::new(file);
+        return Ok(writer);
     }
     /*pub fn readline() -> Result<(), ErrorRead> {
         let mut file = File::open("file/test.txt").map_err(|_| ErrorRead::FileOpenError)?;
@@ -164,10 +178,17 @@ impl ReaderFile{
         let result = self.env.clone().eval(value)?;
         Ok(result.to_string())
     }
-    fn output(&self, result: String) -> () {
+    fn output(&self, result: String, writer: Rc<Option<BufWriter<File>>>) -> () {
         if result == "()".to_string() {
             return;
         }
+        let result_u8: &[u8] = result.as_bytes();
+        /*if self.have_output_file {
+            writer.unwrap().write(result_u8);
+        }
+        else {
+            println!("{}", result);
+        }*/
         println!("{}", result);
     }
     fn flush(&mut self) -> () {
@@ -191,7 +212,21 @@ impl ReaderFile{
                 reader = r;
             }
         }
-        let open_output_result = self.open_output_file();
+        let mut writer: Rc<Option<BufWriter<File>>> = Rc::new(None);
+        if self.have_output_file {
+            let open_output_result = self.open_output_file();
+            match open_output_result {
+                Err(e) => {
+                    eprintln!("{:?}", e);
+                    self.flush();
+                    std::process::exit(127);
+                }
+                Ok(w) => {
+                    writer = Rc::new(Some(w));
+                }
+            }
+        }
+        
         let mut line_count: isize = 0;
         if self.enable {
             println!("Execute step by step. Press ENTER to continue.");
@@ -230,7 +265,7 @@ impl ReaderFile{
                                 std::process::exit(127);
                             },
                             Ok(s) => {
-                                self.output(s);
+                                self.output(s, Rc::clone(&writer));
                             },
                         }
                         /*if self.have_output_file {
