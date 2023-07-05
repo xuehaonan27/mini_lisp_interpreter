@@ -1,10 +1,10 @@
 use crate::builtins::list;
 use crate::value::Value;
 use crate::eval_env::EvalEnv;
+use std::rc::Rc;
+pub type SpecialForm = fn(Vec<Value>, Rc<EvalEnv>) -> Value;
 
-pub type SpecialForm = fn(Vec<Value>, &EvalEnv) -> Value;
-
-pub fn define_form(args: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn define_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     if args.len() < 2 {
         panic!("SyntaxError: Missing parameter in form <define>.");
     }
@@ -16,7 +16,7 @@ pub fn define_form(args: Vec<Value>, env: &EvalEnv) -> Value {
             // 所以必须用borrow_mut()方法获得RefCell里面哈希表的可变引用.
             // 但是这个可变引用不可以作为get的self参数, 因为self要求一个共享引用
             // 因此出此下策!
-            let temp_env = env.clone();
+            /*let temp_env = env.clone();
             let mut ref_of_map = env.symbol_map.borrow_mut();
             if temp_env.symbol_map.borrow().contains_key(&s) {
                 let borrow = temp_env.symbol_map.borrow();
@@ -30,6 +30,27 @@ pub fn define_form(args: Vec<Value>, env: &EvalEnv) -> Value {
             }
             else {
                 _ = ref_of_map.insert(s, temp_env.eval(args[1].clone()).expect("Corruption when evaluating a value in form <define>."));
+            }*/
+
+            let temp_env = env.clone();
+            if temp_env.symbol_map.borrow().contains_key(&s) {
+                let borrow = temp_env.symbol_map.borrow();
+                let value: Option<&Value> = borrow.get(&args[1].to_string());
+                if value.is_some() {
+                    let mut ref_of_map = env.symbol_map.borrow_mut();
+                    _ = ref_of_map.insert(s, value.unwrap().clone());
+                    println!("{:?}", ref_of_map);
+                }
+                else {
+                    let mut ref_of_map = env.symbol_map.borrow_mut();
+                    _ = ref_of_map.insert(s, temp_env.eval(args[1].clone()).expect("Corruption when evaluating a value in form <define>."));
+                    println!("{:?}", ref_of_map);
+                }
+            }
+            else {
+                let mut ref_of_map = env.symbol_map.borrow_mut();
+                _ = ref_of_map.insert(s, temp_env.eval(args[1].clone()).expect("Corruption when evaluating a value in form <define>."));
+                println!("{:?}", ref_of_map);
             }
         },
         Value::PairValue(car, cdr) => {
@@ -38,7 +59,8 @@ pub fn define_form(args: Vec<Value>, env: &EvalEnv) -> Value {
                     let mut lambda_args: Vec<Value> = vec![*cdr];
                     lambda_args.append(&mut args[1..].to_vec());
                     let temp_env = env.clone();
-                    _ = env.symbol_map.borrow_mut().insert(s, lambda_form(lambda_args, &temp_env));
+                    _ = env.symbol_map.borrow_mut().insert(s, lambda_form(lambda_args, temp_env));
+                    println!("{:?}", env.symbol_map);
                 },
                 _ => panic!("SyntaxError: Malformed define."),
             }
@@ -47,7 +69,7 @@ pub fn define_form(args: Vec<Value>, env: &EvalEnv) -> Value {
     }
     Value::NilValue
 }
-pub fn quote_form(args: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn quote_form(args: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if args.len() < 1 {
         panic!("SyntaxError: Missing parameter in form <quote>.");
     }
@@ -55,7 +77,7 @@ pub fn quote_form(args: Vec<Value>, _env: &EvalEnv) -> Value {
         args[0].clone()
     }
 }
-pub fn if_form(args: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn if_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     let result = env.eval(args[0].clone());
     if result.is_ok() {
         match result.unwrap() {
@@ -68,7 +90,7 @@ pub fn if_form(args: Vec<Value>, env: &EvalEnv) -> Value {
         env.eval(args[1].clone()).expect("Corruption when evaluating a value in form <if>")
     }
 }
-pub fn and_form(args: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn and_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     if args.is_empty() {
         return Value::BooleanValue(true);
     }
@@ -93,7 +115,7 @@ pub fn and_form(args: Vec<Value>, env: &EvalEnv) -> Value {
         Value::NilValue
     }
 }
-pub fn or_form(args: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn or_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     if args.is_empty() {
         return Value::BooleanValue(false);
     }
@@ -112,17 +134,19 @@ pub fn or_form(args: Vec<Value>, env: &EvalEnv) -> Value {
     }
     Value::BooleanValue(false)
 }
-pub fn lambda_form(args: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn lambda_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     let vec: Vec<Value> = args[0].to_vector().expect("Corruption when converting a value to vector in form <lambda>.");
     let mut params: Vec<String> = Vec::new();
     vec.iter().for_each(|value| params.push(value.to_string()));
     let body: Vec<Value> = args[1..].to_vec();
     match args[0] {
-        Value::PairValue(_, _) => return Value::LambdaValue(Box::new(params), Box::new(body), env.clone()),
-        _ => return Value::LambdaValue(Box::new(Vec::<String>::new()), Box::new(body), env.clone()),
+        // Value::PairValue(_, _) => return Value::LambdaValue(Box::new(params), Box::new(body), env.clone()),
+        // _ => return Value::LambdaValue(Box::new(Vec::<String>::new()), Box::new(body), env.clone()),
+        Value::PairValue(_, _) => return Value::LambdaValue(Box::new(params), Box::new(body), Rc::clone(&env)),
+        _ => return Value::LambdaValue(Box::new(Vec::<String>::new()), Box::new(body), Rc::clone(&env)),
     }
 }
-pub fn cond_form(args: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn cond_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     for (index, arg) in args.iter().enumerate() {
         match arg {
             Value::PairValue(_, _) => {
@@ -156,7 +180,7 @@ pub fn cond_form(args: Vec<Value>, env: &EvalEnv) -> Value {
     }
     Value::NilValue
 }
-pub fn begin_form(args: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn begin_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     if args.is_empty() {
         panic!("SyntaxError: missing parameter in form <begin>.");
     }
@@ -166,7 +190,7 @@ pub fn begin_form(args: Vec<Value>, env: &EvalEnv) -> Value {
     }
     result
 }
-pub fn let_form(args: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn let_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     let mut params1: Vec<String> = Vec::new();
     let mut params2: Vec<Value> = Vec::new();
     let bindings: Vec<Value>;
@@ -200,14 +224,14 @@ pub fn let_form(args: Vec<Value>, env: &EvalEnv) -> Value {
     args[1..].iter().for_each(|arg| results.push(env_derived.eval(arg.clone()).expect("Corruption when evaluating a value in form <let>")));
     results.pop().unwrap_or(Value::NilValue)
 }
-pub fn quasiquote_form(args: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn quasiquote_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     let mut results: Vec<Value> = Vec::new();
     let arg_vec: Vec<Value> = args[0].to_vector().expect("Corruption when converting a value to vector in form <quasiquote>.");
     for arg in arg_vec {
         match arg.clone() {
             Value::PairValue(car, cdr) => {
                 match *car {
-                    Value::SymbolValue(s) if s == "unquote".to_string() => results.push(unquote_form(cdr.to_vector().expect("Corruption when converting a value to vector in form <quasiquote>."), env)),
+                    Value::SymbolValue(s) if s == "unquote".to_string() => results.push(unquote_form(cdr.to_vector().expect("Corruption when converting a value to vector in form <quasiquote>."), env.clone())), // clone here!
                     Value::SymbolValue(s) if s == "quasiquote".to_string() => panic!("Calling quasiquote inside quasiquote is an undefined behavior."),
                     _ => results.push(arg), 
                 }
@@ -217,7 +241,7 @@ pub fn quasiquote_form(args: Vec<Value>, env: &EvalEnv) -> Value {
     }
     list(results, env)
 }
-pub fn unquote_form(args: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn unquote_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     if args.len() < 1 {
         panic!("SyntaxError: Missing argument in form <unquote>.");
     }

@@ -2,7 +2,8 @@ use crate::value::{Value, is_integer};
 use crate::eval_env::EvalEnv;
 use std::process;
 use std::panic;
-pub fn apply(params: Vec<Value>, env: &EvalEnv) -> Value {
+use std::rc::Rc;
+pub fn apply(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     if params.len() < 2{
         panic!("SyntaxError: Missing argument in procedure <apply>.");
     }
@@ -28,11 +29,11 @@ pub fn apply(params: Vec<Value>, env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn print(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn print(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     params.iter().for_each(|param| println!("{}", param.to_string()));
     Value::NilValue  
 }
-pub fn display(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn display(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <display>.");
     }
@@ -51,7 +52,7 @@ pub fn display(params: Vec<Value>, _env: &EvalEnv) -> Value {
         Value::NilValue
     }
 }
-pub fn displayln(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn displayln(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <display>.");
     }
@@ -70,7 +71,7 @@ pub fn displayln(params: Vec<Value>, _env: &EvalEnv) -> Value {
         Value::NilValue
     }
 }
-pub fn error(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn error(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() > 1 {
         panic!("SyntaxError: Too many argument in procedure <display>.");
     }
@@ -81,7 +82,7 @@ pub fn error(params: Vec<Value>, _env: &EvalEnv) -> Value {
         panic!("Error thrown.");
     }
 }
-pub fn eval(params: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn eval(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <eval>.");
     }
@@ -95,7 +96,7 @@ pub fn eval(params: Vec<Value>, env: &EvalEnv) -> Value {
 /// 非安全退出. 
 /// 并不保证能够顺利退出. 
 /// 当exit调用格式不对时会panic而非exit.
-pub fn exit(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn exit(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.is_empty() {
         process::exit(0);
     }
@@ -111,7 +112,7 @@ pub fn exit(params: Vec<Value>, _env: &EvalEnv) -> Value {
 }
 /// 强制安全退出. 
 /// 当出现exit_force调用格式不对时会以127退出码退出.
-pub fn exit_force(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn exit_force(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.is_empty() {
         process::exit(0);
     }
@@ -129,7 +130,7 @@ pub fn exit_force(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn newline(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn newline(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.is_empty() {
         println!();
         Value::NilValue
@@ -139,7 +140,7 @@ pub fn newline(params: Vec<Value>, _env: &EvalEnv) -> Value {
     }
 }
 
-pub fn atom_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn atom_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <atom?>.");
     }
@@ -157,7 +158,7 @@ pub fn atom_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn boolean_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn boolean_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <boolean?>.");
     }
@@ -171,7 +172,7 @@ pub fn boolean_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn integer_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn integer_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <integer?>.");
     }
@@ -192,7 +193,7 @@ pub fn integer_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn list_or_not(params: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn list_or_not(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <list?>.");
     }
@@ -207,7 +208,7 @@ pub fn list_or_not(params: Vec<Value>, env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn number_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn number_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <number?>.");
     }
@@ -221,7 +222,7 @@ pub fn number_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn null_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn null_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <null?>.");
     }
@@ -235,7 +236,7 @@ pub fn null_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn pair_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn pair_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <pair?>.");
     }
@@ -249,7 +250,7 @@ pub fn pair_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn procedure_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn procedure_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <procedure?>.");
     }
@@ -264,7 +265,7 @@ pub fn procedure_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn string_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn string_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <string?>.");
     }
@@ -278,7 +279,7 @@ pub fn string_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn symbol_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn symbol_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <symbol?>.");
     }
@@ -294,7 +295,7 @@ pub fn symbol_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
 }
 /// 自己拓展的功能
 /// 检查某个符号是否已经在当前环境绑定
-pub fn defined_local_or_not(params: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn defined_local_or_not(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <defined_local?>.");
     }
@@ -312,7 +313,7 @@ pub fn defined_local_or_not(params: Vec<Value>, env: &EvalEnv) -> Value {
 }
 /// 自己拓展的功能
 /// 检查某个符号是否已经在所有可见环境内绑定
-pub fn defined_all_or_not(params: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn defined_all_or_not(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <defined_all?>.");
     }
@@ -333,7 +334,7 @@ pub fn defined_all_or_not(params: Vec<Value>, env: &EvalEnv) -> Value {
 /// 将 list 内的元素按顺序拼接为一个新的列表. 
 /// 返回值:拼接后的列表
 /// 实参个数为零时返回空表。
-pub fn append(params: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn append(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     let mut ret: Vec<Value> = Vec::new();
     for param in params {
         match param {
@@ -358,7 +359,7 @@ pub fn append(params: Vec<Value>, env: &EvalEnv) -> Value {
 /// value 只可以是原子类型.
 /// value 是空表的时候将不进行任何操作
 /// value 是过程类型与lambda类型时将报错
-pub fn push(params: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn push(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     let mut ret: Vec<Value> = Vec::new();
     for param in params {
         match param {
@@ -382,7 +383,7 @@ pub fn push(params: Vec<Value>, env: &EvalEnv) -> Value {
     }
     list(ret, env)
 }
-pub fn car(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn car(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <car>.");
     }
@@ -396,7 +397,7 @@ pub fn car(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn cdr(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn cdr(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <car>.");
     }
@@ -410,7 +411,7 @@ pub fn cdr(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn cons(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn cons(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 2 {
         panic!("SyntaxError: Missing argument in procedure <cons>.");
     }
@@ -421,7 +422,7 @@ pub fn cons(params: Vec<Value>, _env: &EvalEnv) -> Value {
         Value::PairValue(Box::new(params[0].clone()), Box::new(params[1].clone()))
     }
 }
-pub fn length(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn length(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <length>.");
     }
@@ -446,7 +447,7 @@ pub fn length(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn list(params: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn list(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     if params.is_empty() {
         Value::NilValue
     }
@@ -454,7 +455,7 @@ pub fn list(params: Vec<Value>, env: &EvalEnv) -> Value {
         Value::PairValue(Box::new(params[0].clone()), Box::new(list(params[1..].to_vec(), env)))
     }
 }
-pub fn map(params: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn map(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     if params.len() < 2 {
         panic!("SyntaxError: Missing argument in procedure <map>.");
     }
@@ -467,8 +468,8 @@ pub fn map(params: Vec<Value>, env: &EvalEnv) -> Value {
             let mut results: Vec<Value> = Vec::new();
             match params[0].clone() {
                 Value::ProcedureValue(f) => {
-                    args.unwrap().iter().clone().for_each(|arg| results.push(f(vec![arg.clone()], env)));
-                    return list(results, env);
+                    args.unwrap().iter().clone().for_each(|arg| results.push(f(vec![arg.clone()], Rc::clone(&env))));
+                    return list(results, Rc::clone(&env));
                 }
                 Value::LambdaValue(params, body, env_in_lambda) => {
                     args.unwrap().iter().clone().for_each(|arg| results.push(
@@ -492,7 +493,7 @@ pub fn map(params: Vec<Value>, env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn map_expand(params: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn map_expand(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     if params.len() < 2 {
         panic!("SyntaxError: Missing argument in procedure <map_expand>.");
     }
@@ -519,7 +520,7 @@ pub fn map_expand(params: Vec<Value>, env: &EvalEnv) -> Value {
         );
         match params[0].clone() {
             Value::ProcedureValue(f) => {
-                let result = f(temp_args, env);
+                let result = f(temp_args, Rc::clone(&env));
                 results.push(result);
             },
             Value::LambdaValue(params_in_lambda, body, env_in_lambda) => {
@@ -535,7 +536,7 @@ pub fn map_expand(params: Vec<Value>, env: &EvalEnv) -> Value {
     }
     list(results, env)
 }
-pub fn filter(params: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn filter(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     if params.len() < 2 {
         panic!("SyntaxError: Missing argument in procedure <filter>.");
     }
@@ -549,7 +550,7 @@ pub fn filter(params: Vec<Value>, env: &EvalEnv) -> Value {
             match params[0].clone() {
                 Value::ProcedureValue(f) => {
                     for arg in args.unwrap() {
-                        let result: Value = f(vec![arg.clone()], env);
+                        let result: Value = f(vec![arg.clone()], Rc::clone(&env));
                         match result {
                             Value::BooleanValue(false) => {},
                             _ => results.push(arg.clone()),
@@ -583,7 +584,7 @@ pub fn filter(params: Vec<Value>, env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn reduce(params: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn reduce(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     if params.len() < 2 {
         panic!("SyntaxError: Missing argument in procedure <reduce>.");
     }
@@ -596,8 +597,8 @@ pub fn reduce(params: Vec<Value>, env: &EvalEnv) -> Value {
                 match *cdr {
                     Value::NilValue => return *car,
                     _ => {
-                        let args: Vec<Value> = vec![*car, reduce(vec![params[0].clone(), *cdr], env)];
-                        return f(args, env);
+                        let args: Vec<Value> = vec![*car, reduce(vec![params[0].clone(), *cdr], Rc::clone(&env))];
+                        return f(args, Rc::clone(&env));
                     },
                 }
             },
@@ -620,7 +621,7 @@ pub fn reduce(params: Vec<Value>, env: &EvalEnv) -> Value {
     }
 }
 
-pub fn add(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn add(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     let mut result: f64 = 0f64;
     for param in params {
         match param {
@@ -630,7 +631,7 @@ pub fn add(params: Vec<Value>, _env: &EvalEnv) -> Value {
     }
     Value::NumericValue(result)
 }
-pub fn subtract(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn subtract(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <->.");
     }
@@ -650,7 +651,7 @@ pub fn subtract(params: Vec<Value>, _env: &EvalEnv) -> Value {
         panic!("SyntaxError: Too many argument in procedure <->.");
     }
 }
-pub fn multiply(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn multiply(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     let mut ret: f64 = 1f64;
     for param in params {
         match param {
@@ -660,7 +661,7 @@ pub fn multiply(params: Vec<Value>, _env: &EvalEnv) -> Value {
     }
     Value::NumericValue(ret)
 }
-pub fn divide(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn divide(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure </>.");
     }
@@ -681,7 +682,7 @@ pub fn divide(params: Vec<Value>, _env: &EvalEnv) -> Value {
         panic!("SyntaxError: Too many argument in procedure </>.");
     }
 }
-pub fn abs(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn abs(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <abs>.");
     }
@@ -695,7 +696,7 @@ pub fn abs(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn expt(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn expt(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 2 {
         panic!("SyntaxError: Missing argument in procedure <expt>.");
     }
@@ -711,7 +712,7 @@ pub fn expt(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn quotient(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn quotient(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 2 {
         panic!("SyntaxError: Missing argument in procedure <quotient>.");
     }
@@ -727,7 +728,7 @@ pub fn quotient(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn modulo(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn modulo(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 2 {
         panic!("SyntaxError: Missing argument in procedure <modulo>.");
     }
@@ -755,7 +756,7 @@ pub fn modulo(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn remainder(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn remainder(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 2 {
         panic!("SyntaxError: Missing argument in procedure <remainder>.");
     }
@@ -777,7 +778,7 @@ pub fn remainder(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn eq_q(params: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn eq_q(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     if params.len() < 2 {
         panic!("SyntaxError: Missing argument in procedure <eq?>.");
     }
@@ -792,9 +793,9 @@ pub fn eq_q(params: Vec<Value>, env: &EvalEnv) -> Value {
             (Value::SymbolValue(s0), Value::SymbolValue(s1)) => return Value::BooleanValue(s0 == s1),
             (Value::StringValue(s0), Value::StringValue(s1)) => return Value::BooleanValue(s0 == s1),
             (Value::PairValue(car0, cdr0), Value::PairValue(car1, cdr1)) => {
-                match eq_q(vec![*car0, *car1].to_vec(), env) {
+                match eq_q(vec![*car0, *car1].to_vec(), Rc::clone(&env)) {
                     v @ Value::BooleanValue(false) => return v,
-                    Value::BooleanValue(true) => return eq_q(vec![*cdr0, *cdr1].to_vec(), env),
+                    Value::BooleanValue(true) => return eq_q(vec![*cdr0, *cdr1].to_vec(), Rc::clone(&env)),
                     _ => panic!("You should never see this message."),
                 }
             },
@@ -806,7 +807,7 @@ pub fn eq_q(params: Vec<Value>, env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn equal_q(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn equal_q(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 2 {
         panic!("SyntaxError: Missing argument in procedure <equal?>.");
     }
@@ -817,7 +818,7 @@ pub fn equal_q(params: Vec<Value>, _env: &EvalEnv) -> Value {
         return Value::BooleanValue(params[0].to_string() == params[1].to_string());
     }
 }
-pub fn not(params: Vec<Value>, env: &EvalEnv) -> Value {
+pub fn not(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <not>.");
     }
@@ -843,7 +844,7 @@ pub fn not(params: Vec<Value>, env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn equal_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn equal_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 2 {
         panic!("SyntaxError: Missing argument in procedure < = >.");
     }
@@ -857,7 +858,7 @@ pub fn equal_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
         } 
     }
 }
-pub fn less_than_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn less_than_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 2 {
         panic!("SyntaxError: Missing argument in procedure < < >.");
     }
@@ -871,7 +872,7 @@ pub fn less_than_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
         } 
     }
 }
-pub fn more_than_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn more_than_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 2 {
         panic!("SyntaxError: Missing argument in procedure < > >.");
     }
@@ -885,7 +886,7 @@ pub fn more_than_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
         } 
     }
 }
-pub fn less_than_or_equal_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn less_than_or_equal_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 2 {
         panic!("SyntaxError: Missing argument in procedure < <= >.");
     }
@@ -899,7 +900,7 @@ pub fn less_than_or_equal_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
         } 
     }
 }
-pub fn more_than_or_equal_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn more_than_or_equal_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 2 {
         panic!("SyntaxError: Missing argument in procedure < >= >.");
     }
@@ -913,7 +914,7 @@ pub fn more_than_or_equal_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
         } 
     }
 }
-pub fn even_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn even_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <even?>.");
     }
@@ -934,7 +935,7 @@ pub fn even_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn odd_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn odd_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <odd?>.");
     }
@@ -955,7 +956,7 @@ pub fn odd_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn zero_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn zero_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     if params.len() < 1 {
         panic!("SyntaxError: Missing argument in procedure <zero?>.");
     }
@@ -969,6 +970,6 @@ pub fn zero_or_not(params: Vec<Value>, _env: &EvalEnv) -> Value {
         }
     }
 }
-pub fn sort(_params: Vec<Value>, _env: &EvalEnv) -> Value {
+pub fn sort(_params: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     todo!();
 }

@@ -172,7 +172,7 @@ impl EvalEnv {
                             None => {},
                             Some(Value::ProcedureValue(f)) => {
                                 let args: Vec<Value> = v[1..].iter().cloned().map(|value| self.eval(value).expect("Corruption when evaluating a value in fn <eval>")).collect();
-                                return Ok(f(args, self));
+                                return Ok(f(args, Rc::new(self.clone())));
                             },
                             Some(Value::LambdaValue(params_in_lambda, body, env_in_lambda)) => {
                                 // println!("Calling a Lambda evaluation.");
@@ -192,11 +192,11 @@ impl EvalEnv {
                             if *s == "unquote".to_string() {
                                 panic!("Calling unquote outside quasiquote is an undefined behavior.");
                             }
-                            return Ok(self.special_forms.get(s).unwrap()(v[1..].to_vec(), self));
+                            return Ok(self.special_forms.get(s).unwrap()(v[1..].to_vec(), Rc::new(self.clone())));
                         }
                         else if self.builtin_procs.contains_key(s) {
                             let args: Vec<Value> = v[1..].iter().cloned().map(|value| self.eval(value).expect("Corruption when evaluating a value in fn <eval>")).collect();
-                            return Ok(self.builtin_procs.get(s).unwrap()(args, self));
+                            return Ok(self.builtin_procs.get(s).unwrap()(args, Rc::new(self.clone())));
                         }
                         else {
                             panic!("Name {s} not defined.");
@@ -208,13 +208,13 @@ impl EvalEnv {
                         v.iter().for_each(|value| {
                             new_vec.push(self.eval(value.clone()).expect("Corruption when evaluating a value in fn <eval>"));
                         });
-                        let new_expr: Value = list(new_vec, self);
+                        let new_expr: Value = list(new_vec, Rc::new(self.clone()));
                         self.eval(new_expr)
                     },
                     Value::ProcedureValue(f) => {
                         // let proc: Value = self.eval(v[0].clone());
                         // self.apply(proc, v[1..].to_vec())
-                        Ok(f(v[1..].to_vec(), self))
+                        Ok(f(v[1..].to_vec(), Rc::new(self.clone())))
                     },
                     Value::LambdaValue(params, body, env) => {
                         let env_derived = env.derive(*params.clone(), v[1..].to_vec());

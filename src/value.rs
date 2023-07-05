@@ -1,6 +1,6 @@
 use std::hash::{Hash,Hasher};
 use crate::error:: ErrorToVector;
-pub type BuiltinFn = fn(Vec<Value>, env: &EvalEnv) -> Value;
+pub type BuiltinFn = fn(Vec<Value>, env: Rc<EvalEnv>) -> Value;
 
 use std::fmt::Debug;
 #[derive(Clone)]
@@ -12,7 +12,7 @@ pub enum Value {
     SymbolValue(String),
     PairValue(Box<Value>, Box::<Value>),
     ProcedureValue(Box<BuiltinFn>),
-    LambdaValue(Box<Vec<String>>, Box<Vec<Value>>, EvalEnv),
+    LambdaValue(Box<Vec<String>>, Box<Vec<Value>>, Rc<EvalEnv>),
 }
 pub fn is_integer(num: &f64) -> bool {
     num.abs() < std::f64::EPSILON ||
