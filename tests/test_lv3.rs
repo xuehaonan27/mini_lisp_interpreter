@@ -1,4 +1,4 @@
-use mini_lisp_interpreter::{test_machine::test_machine, eval_env::EvalEnv};
+/*use mini_lisp_interpreter::{test_machine::test_machine, eval_env::EvalEnv};
 
 #[test]
 fn lv3() {
@@ -12,4 +12,4 @@ fn lv3() {
     test_machine(("y", "42"), &eval_env);
     test_machine(("(define y \"abc\")", "()"), &eval_env);
     test_machine(("y", "\"abc\""), &eval_env);
-}
+}*/

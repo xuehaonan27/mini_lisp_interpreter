@@ -132,7 +132,7 @@ impl EvalEnv {
         v.iter().for_each(|value| { result.push(self.eval(value.clone()).expect("Corruption when evaluating a list in fn <eval_list>"));});
         result
     }*/
-    pub fn eval(&self, expr: Value) -> Result<Value, ErrorEval> {
+    pub fn eval(self: Rc<EvalEnv>, expr: Value) -> Result<Value, ErrorEval> {
         match expr {
             Value::BooleanValue(_) => return Ok(expr),
             Value::NumericValue(_) => return Ok(expr),
@@ -171,18 +171,18 @@ impl EvalEnv {
                         match self.find_binding(s) {
                             None => {},
                             Some(Value::ProcedureValue(f)) => {
-                                let args: Vec<Value> = v[1..].iter().cloned().map(|value| self.eval(value).expect("Corruption when evaluating a value in fn <eval>")).collect();
-                                return Ok(f(args, Rc::new(self.clone())));
+                                let args: Vec<Value> = v[1..].iter().cloned().map(|value| self.clone().eval(value).expect("Corruption when evaluating a value in fn <eval>")).collect();
+                                return Ok(f(args, Rc::clone(&self)));
                             },
                             Some(Value::LambdaValue(params_in_lambda, body, env_in_lambda)) => {
                                 // println!("Calling a Lambda evaluation.");
                                 // v[1..].iter().for_each(|value| println!("{:?}", value));
-                                let args: Vec<Value> = v[1..].iter().map(|value| self.eval(value.clone()).expect("Corruption when evaluating a value in env.eval: lambda.")).collect();
+                                let args: Vec<Value> = v[1..].iter().map(|value| self.clone().eval(value.clone()).expect("Corruption when evaluating a value in env.eval: lambda.")).collect();
                                 // let env_derived: EvalEnv = env_in_lambda.derive(*params_in_lambda, v[1..].to_vec());
-                                let env_derived: EvalEnv = env_in_lambda.derive(*params_in_lambda, args);
+                                let env_derived: Rc<EvalEnv> = env_in_lambda.derive(*params_in_lambda, args).into();
                                 let mut result: Value = Value::NilValue;
                                 for bodyv in *body {
-                                    result = env_derived.eval(bodyv).expect("Corruption when evaluating a value in fn <eval> part <lambda>");
+                                    result = env_derived.clone().eval(bodyv).expect("Corruption when evaluating a value in fn <eval> part <lambda>");
                                 }
                                 return Ok(result);
                             },
@@ -192,11 +192,11 @@ impl EvalEnv {
                             if *s == "unquote".to_string() {
                                 panic!("Calling unquote outside quasiquote is an undefined behavior.");
                             }
-                            return Ok(self.special_forms.get(s).unwrap()(v[1..].to_vec(), Rc::new(self.clone())));
+                            return Ok(self.special_forms.get(s).unwrap()(v[1..].to_vec(), Rc::clone(&self)));
                         }
                         else if self.builtin_procs.contains_key(s) {
-                            let args: Vec<Value> = v[1..].iter().cloned().map(|value| self.eval(value).expect("Corruption when evaluating a value in fn <eval>")).collect();
-                            return Ok(self.builtin_procs.get(s).unwrap()(args, Rc::new(self.clone())));
+                            let args: Vec<Value> = v[1..].iter().cloned().map(|value| self.clone().eval(value).expect("Corruption when evaluating a value in fn <eval>")).collect();
+                            return Ok(self.builtin_procs.get(s).unwrap()(args, Rc::clone(&self)));
                         }
                         else {
                             panic!("Name {s} not defined.");
@@ -206,21 +206,21 @@ impl EvalEnv {
                     Value::PairValue(_, _) => {
                         let mut new_vec: Vec<Value> = Vec::new();
                         v.iter().for_each(|value| {
-                            new_vec.push(self.eval(value.clone()).expect("Corruption when evaluating a value in fn <eval>"));
+                            new_vec.push(self.clone().eval(value.clone()).expect("Corruption when evaluating a value in fn <eval>"));
                         });
-                        let new_expr: Value = list(new_vec, Rc::new(self.clone()));
+                        let new_expr: Value = list(new_vec, Rc::clone(&self));
                         self.eval(new_expr)
                     },
                     Value::ProcedureValue(f) => {
                         // let proc: Value = self.eval(v[0].clone());
                         // self.apply(proc, v[1..].to_vec())
-                        Ok(f(v[1..].to_vec(), Rc::new(self.clone())))
+                        Ok(f(v[1..].to_vec(), Rc::clone(&self)))
                     },
                     Value::LambdaValue(params, body, env) => {
-                        let env_derived = env.derive(*params.clone(), v[1..].to_vec());
+                        let env_derived: Rc<EvalEnv> = env.derive(*params.clone(), v[1..].to_vec()).into();
                         let mut result: Value = Value::NilValue;
                         for bodyv in *body.clone() {
-                            result = env_derived.eval(bodyv).expect("Corruption when evaluating a value in fn <eval>");
+                            result = env_derived.clone().eval(bodyv).expect("Corruption when evaluating a value in fn <eval>");
                         }
                         return Ok(result);
                     },

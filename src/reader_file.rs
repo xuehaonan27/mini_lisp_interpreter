@@ -6,6 +6,7 @@ use crate::Parser;
 use crate::error::ErrorEval;
 use crate::io::BufReader;
 use std::io::BufRead;
+use std::rc::Rc;
 pub struct ReaderFile {
     left_parenthesis_count: isize,
     is_inside_quote: bool,
@@ -13,7 +14,7 @@ pub struct ReaderFile {
     is_inside_comment: bool,
     templine: String,
     line: String,
-    env: EvalEnv,
+    env: Rc<EvalEnv>,
     enable: bool,
     have_output_file: bool,
 }
@@ -27,7 +28,7 @@ impl ReaderFile{
             is_inside_comment: false,
             templine: String::new(),
             line: String::new(),
-            env: EvalEnv::new(),
+            env: Rc::new(EvalEnv::new()),
             enable: false,
             have_output_file: false,
         }
@@ -160,7 +161,7 @@ impl ReaderFile{
         let tokens = tokenizer.tokenize();
         let mut parser = Parser::new(tokens);
         let value = parser.parse();
-        let result = self.env.eval(value)?;
+        let result = self.env.clone().eval(value)?;
         Ok(result.to_string())
     }
     fn output(&self, result: String) -> () {

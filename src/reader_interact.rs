@@ -5,6 +5,7 @@ use crate::Parser;
 use crate::EvalEnv;
 use crate::error::ErrorEval;
 use std::io::Write;
+use std::rc::Rc;
 pub struct ReaderInteract {
     space_buffer: Vec<usize>,
     buffer_modify_pos: isize,
@@ -13,7 +14,7 @@ pub struct ReaderInteract {
     is_inside_comment: bool,
     templine: String,
     line: String,
-    env: EvalEnv,
+    env: Rc<EvalEnv>,
     // is_after_sharp: bool,
     // is_inside_multi_line_note: bool,
 }
@@ -28,7 +29,7 @@ impl ReaderInteract {
             is_inside_comment: false,
             templine: String::new(),
             line: String::new(),
-            env: EvalEnv::new(),
+            env: Rc::new(EvalEnv::new()),
         }
     }
     fn readline(&mut self) -> Result<(), ErrorRead> {
@@ -144,7 +145,7 @@ impl ReaderInteract {
         let tokens = tokenizer.tokenize();
         let mut parser = Parser::new(tokens);
         let value = parser.parse();
-        let result = self.env.eval(value)?;
+        let result = self.env.clone().eval(value)?;
         Ok(result.to_string())
     }
     fn output(&self, result: String) -> () {

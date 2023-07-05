@@ -1,8 +1,8 @@
 use crate::eval_env::EvalEnv;
 use crate::tokenizer::Tokenizer;
 use crate::parse::Parser;
-
-pub fn test_machine(param: (&str, &str), eval_env: &EvalEnv) -> () {
+use std::rc::Rc;
+pub fn test_machine(param: (&str, &str), eval_env: Rc<EvalEnv>) -> () {
     let input: String = param.0.to_string();
     let right_answer = param.1.to_string();
     // let eval_env: EvalEnv = EvalEnv::new();

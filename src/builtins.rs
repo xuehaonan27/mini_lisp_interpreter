@@ -18,10 +18,10 @@ pub fn apply(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
                 return f(args, env);
             },
             Value::LambdaValue(params_in_lambda, body, env) => {
-                let env_derived = env.derive(*params_in_lambda, params[1].to_vector().expect("Corruption when converting a value to vector in procedure <apply>."));
+                let env_derived: Rc<EvalEnv> = env.derive(*params_in_lambda, params[1].to_vector().expect("Corruption when converting a value to vector in procedure <apply>.")).into();
                 let mut result: Value = Value::NilValue;
                 for bodyv in *body {
-                    result = env_derived.eval(bodyv).expect("Corruption when evaluating a value in procedure <apply>.");
+                    result = env_derived.clone().eval(bodyv).expect("Corruption when evaluating a value in procedure <apply>.");
                 }
                 return result;
             },
@@ -475,10 +475,10 @@ pub fn map(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
                     args.unwrap().iter().clone().for_each(|arg| results.push(
                         {
                             let args_in_lambda = vec![arg.clone()];
-                            let env_derived = env_in_lambda.derive(*params.clone(), args_in_lambda);
+                            let env_derived: Rc<EvalEnv> = env_in_lambda.derive(*params.clone(), args_in_lambda).into();
                             let mut result: Value = Value::NilValue;
                             for bodyv in *body.clone() {
-                                result = env_derived.eval(bodyv).expect("Corruption when evaluating a value in procedure <map>");
+                                result = env_derived.clone().eval(bodyv).expect("Corruption when evaluating a value in procedure <map>");
                             }
                             result
                         }
@@ -516,7 +516,7 @@ pub fn map_expand(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     for i in 0..size.unwrap() {
         let mut temp_args: Vec<Value> = Vec::new();
         vecs.iter().for_each(|vec|
-            temp_args.push(env.eval(vec[i].clone()).expect("Corruption when evaluating a value in procedure <map_expand>."))
+            temp_args.push(env.clone().eval(vec[i].clone()).expect("Corruption when evaluating a value in procedure <map_expand>."))
         );
         match params[0].clone() {
             Value::ProcedureValue(f) => {
@@ -524,10 +524,10 @@ pub fn map_expand(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
                 results.push(result);
             },
             Value::LambdaValue(params_in_lambda, body, env_in_lambda) => {
-                let env_derived: EvalEnv = env_in_lambda.derive(*params_in_lambda, temp_args);
+                let env_derived: Rc<EvalEnv> = env_in_lambda.derive(*params_in_lambda, temp_args).into();
                 let mut result: Value = Value::NilValue;
                 for bodyv in *body {
-                    result = env_derived.eval(bodyv).expect("Corruption when evaluating a value in fn <eval> part <lambda>");
+                    result = env_derived.clone().eval(bodyv).expect("Corruption when evaluating a value in fn <eval> part <lambda>");
                 }
                 results.push(result);
             },
@@ -564,10 +564,10 @@ pub fn filter(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
                 Value::LambdaValue(params, body, env_in_lambda) => {
                     for arg in args.unwrap() {
                         let args_in_lambda = vec![arg];
-                        let env_derived = env_in_lambda.derive(*params.clone(), args_in_lambda);
+                        let env_derived: Rc<EvalEnv> = env_in_lambda.derive(*params.clone(), args_in_lambda).into();
                         let mut result: Value = Value::NilValue;
                         for bodyv in *body.clone() {
-                            result = env_derived.eval(bodyv).expect("Corruption when evaluating a value in procedure <filter>");
+                            result = env_derived.clone().eval(bodyv).expect("Corruption when evaluating a value in procedure <filter>");
                         }
                         match result {
                             Value::BooleanValue(false) => continue,
@@ -607,10 +607,10 @@ pub fn reduce(params: Vec<Value>, env: Rc<EvalEnv>) -> Value {
                     Value::NilValue => return *car,
                     _ => {
                         let args: Vec<Value> = vec![*car, reduce(vec![params[0].clone(), *cdr], env)];
-                        let env_derived = env_in_lambda.derive(*params_in_lambda, args);
+                        let env_derived: Rc<EvalEnv> = env_in_lambda.derive(*params_in_lambda, args).into();
                         let mut result: Value = Value::NilValue;
                         for bodyv in *body.clone() {
-                            result = env_derived.eval(bodyv).expect("Corruption when evaluating a value in procedure <reduce>");
+                            result = env_derived.clone().eval(bodyv).expect("Corruption when evaluating a value in procedure <reduce>");
                         }
                         return result;
                     }

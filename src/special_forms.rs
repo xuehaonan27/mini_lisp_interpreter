@@ -43,7 +43,7 @@ pub fn define_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Value {
                 }
                 else {
                     let mut ref_of_map = env.symbol_map.borrow_mut();
-                    _ = ref_of_map.insert(s, temp_env.eval(args[1].clone()).expect("Corruption when evaluating a value in form <define>."));
+                    _ = ref_of_map.insert(s, temp_env.clone().eval(args[1].clone()).expect("Corruption when evaluating a value in form <define>."));
                     println!("{:?}", ref_of_map);
                 }
             }
@@ -78,12 +78,12 @@ pub fn quote_form(args: Vec<Value>, _env: Rc<EvalEnv>) -> Value {
     }
 }
 pub fn if_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Value {
-    let result = env.eval(args[0].clone());
+    let result = env.clone().eval(args[0].clone());
     if result.is_ok() {
         match result.unwrap() {
             Value::BooleanValue(false) => return env.eval(args[2].clone()).expect("Corruption when evaluating a value in form <if>"),
             Value::BooleanValue(true) => return env.eval(args[1].clone()).expect("Corruption when evaluating a value in form <if>"),
-            _ => return env.eval(args[1].clone()).expect("Corruption when evaluating a value in form <if>"),
+            _ => return env.clone().eval(args[1].clone()).expect("Corruption when evaluating a value in form <if>"),
         }
     }
     else {
@@ -95,7 +95,7 @@ pub fn and_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Value {
         return Value::BooleanValue(true);
     }
     for arg in args.clone() {
-        let result = env.eval(arg.clone());
+        let result = env.clone().eval(arg.clone());
         if result.is_ok() {
             match result.unwrap() {
                 Value::BooleanValue(false) => return Value::BooleanValue(false),
@@ -120,7 +120,7 @@ pub fn or_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Value {
         return Value::BooleanValue(false);
     }
     for arg in args.clone() {
-        let result = env.eval(arg.clone());
+        let result = env.clone().eval(arg.clone());
         if result.is_ok() {
             match result.unwrap() {
                 Value::BooleanValue(false) => continue,
@@ -151,14 +151,14 @@ pub fn cond_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Value {
         match arg {
             Value::PairValue(_, _) => {
                 let arg_vec: Vec<Value> = arg.to_vector().expect("Corruption when converting a value to vector in form <cond>.");
-                let flag = env.eval(arg_vec[0].clone()).expect("Corruption when evaluating a value in form <cond>.");
+                let flag = env.clone().eval(arg_vec[0].clone()).expect("Corruption when evaluating a value in form <cond>.");
                 match flag {
                     Value::BooleanValue(false) => continue,
                     Value::SymbolValue(s) if s == "else".to_string() => {
                         if index == args.len() - 1 {
                             let mut result_vec:Vec<Value> = Vec::new(); 
                             arg_vec.iter().for_each(|arg_v| 
-                                result_vec.push(env.eval(arg_v.clone()).expect("Corruption when evaluating a value in form <cond>."))
+                                result_vec.push(env.clone().eval(arg_v.clone()).expect("Corruption when evaluating a value in form <cond>."))
                             );
                             return result_vec.pop().expect("SyntaxError: Missing executing part of <else> clause.");
                         }
@@ -169,7 +169,7 @@ pub fn cond_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Value {
                     _ => {
                         let mut result_vec:Vec<Value> = Vec::new(); 
                         arg_vec.iter().for_each(|arg_v| 
-                            result_vec.push(env.eval(arg_v.clone()).expect("Corruption when evaluating a value in form <cond>."))
+                            result_vec.push(env.clone().eval(arg_v.clone()).expect("Corruption when evaluating a value in form <cond>."))
                         );
                         return result_vec.pop().expect("SyntaxError: Missing executing part of a clause.");
                     },
@@ -186,7 +186,7 @@ pub fn begin_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Value {
     }
     let mut result: Value = Value::NilValue;
     for arg in args {
-        result = env.eval(arg).expect("Corruption when evaluating a value in form <begin>");
+        result = env.clone().eval(arg).expect("Corruption when evaluating a value in form <begin>");
     }
     result
 }
@@ -204,7 +204,7 @@ pub fn let_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Value {
                 let binding_vec: Vec<Value> = binding.to_vector().expect("Corruption when converting a value to vector in form <let>.");
                 if binding_vec.len() == 2 {
                     params1.push(binding_vec[0].to_string());
-                    params2.push(env.eval(binding_vec[1].clone()).expect("Corruption when evaluating a value in form <let>."));
+                    params2.push(env.clone().eval(binding_vec[1].clone()).expect("Corruption when evaluating a value in form <let>."));
                 }
                 else {
                     panic!("SyntaxError: temporary binding should be a 2-element list.");
@@ -214,14 +214,14 @@ pub fn let_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Value {
         }
     }
     let mut results: Vec<Value> = Vec::new();
-    let env_derived: EvalEnv = env.derive(params1, params2);
+    let env_derived: Rc<EvalEnv> = env.derive(params1, params2).into();
     /*for (index, arg) in args.iter().enumerate() {
         if index == 0 {
             continue;
         }
         results.push(env_derived.eval(arg.clone()).expect("Corruption when evaluating a value in form <let>"));
     }*/
-    args[1..].iter().for_each(|arg| results.push(env_derived.eval(arg.clone()).expect("Corruption when evaluating a value in form <let>")));
+    args[1..].iter().for_each(|arg| results.push(env_derived.clone().eval(arg.clone()).expect("Corruption when evaluating a value in form <let>")));
     results.pop().unwrap_or(Value::NilValue)
 }
 pub fn quasiquote_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Value {
