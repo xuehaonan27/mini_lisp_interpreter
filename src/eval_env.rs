@@ -9,7 +9,8 @@ use crate::error::ErrorEval;
 #[derive(Clone)]
 pub struct EvalEnv{
     pub symbol_map: RefCell<HashMap<String, Value>>,
-    pub parent: Rc<Option<EvalEnv>>,
+    // pub parent: Rc<Option<EvalEnv>>,
+    pub parent: Option<Rc<EvalEnv>>,
     pub special_forms: HashMap<String, SpecialForm>,
     pub builtin_procs: HashMap<String, BuiltinFn>
 }
@@ -89,7 +90,8 @@ impl EvalEnv {
             ("sort".to_string(), sort as BuiltinFn),
         ]);
         let symbol_map: RefCell<HashMap<String, Value>> = RefCell::new(HashMap::new());
-        let parent: Rc<Option<EvalEnv>> = Rc::new(None);
+        // let parent: Rc<Option<EvalEnv>> = Rc::new(None);
+        let parent: Option<Rc<EvalEnv>> = None;
         Self {symbol_map, parent, special_forms, builtin_procs}
     }
     pub fn derive(&self, params: Vec<String>, args: Vec<Value>) -> Self {
@@ -101,7 +103,8 @@ impl EvalEnv {
         }
         let special_forms: HashMap<String, SpecialForm> = self.special_forms.clone();
         let builtin_procs: HashMap<String, BuiltinFn> = self.builtin_procs.clone();
-        let parent: Rc<Option<EvalEnv>> = Rc::new(Some(self.clone()));
+        // let parent: Rc<Option<EvalEnv>> = Rc::new(Some(self.clone()));
+        let parent: Option<Rc<EvalEnv>> = Some(Rc::new(self.clone())); // WARNING!!!!!
         let mut symbol_map: HashMap<String, Value> = HashMap::new();
         for (key, value) in params.iter().zip(args.iter()) {
             symbol_map.insert(key.clone(), value.clone());
@@ -109,9 +112,36 @@ impl EvalEnv {
         let symbol_map = RefCell::new(symbol_map);
         Self {symbol_map, parent, special_forms, builtin_procs}
     }
-    pub fn find_binding(&self, name: &String) -> Option<Value> {
-        if self.symbol_map.borrow().contains_key(name) {
-            // Some(self.symbol_map.borrow().get(name).unwrap().clone())
+    pub fn find_binding(mut self: Rc<EvalEnv>, name: &String) -> Option<Value> {
+        /* let temp_env = env.clone();
+            if temp_env.symbol_map.borrow().contains_key(&s) {
+                let borrow = temp_env.symbol_map.borrow();
+                let value: Option<&Value> = borrow.get(&args[1].to_string());
+                if value.is_some() {
+                    let mut ref_of_map = env.symbol_map.borrow_mut();
+                    _ = ref_of_map.insert(s, value.unwrap().clone());
+                    println!("{:?}", ref_of_map);
+                }
+                else {
+                    let mut ref_of_map = env.symbol_map.borrow_mut();
+                    _ = ref_of_map.insert(s, temp_env.clone().eval(args[1].clone()).expect("Corruption when evaluating a value in form <define>."));
+                    println!("{:?}", ref_of_map);
+                }
+            }
+            else {
+                let mut ref_of_map = env.symbol_map.borrow_mut();
+                _ = ref_of_map.insert(s, temp_env.eval(args[1].clone()).expect("Corruption when evaluating a value in form <define>."));
+                println!("{:?}", ref_of_map);
+            } */
+        // let temp_env = &*self.to_owned();
+        // let mut temp_env = Rc::make_mut(&mut self).clone();
+
+
+
+        /*let temp_env = self.clone();
+        println!("{:p}", &*self);
+        println!("{:p}", &temp_env);
+        if temp_env.symbol_map.borrow().contains_key(name) {
             self.symbol_map.borrow().get(name).cloned()
         }
         else {
@@ -119,7 +149,19 @@ impl EvalEnv {
                 None
             }
             else {
-                (*self.parent).as_ref().unwrap().find_binding(name)
+                self.parent.clone().unwrap().find_binding(name)
+            }
+        }*/
+        
+        if self.symbol_map.borrow().contains_key(name) {
+            self.symbol_map.borrow().get(name).cloned()
+        }
+        else {
+            if self.parent.is_none() {
+                None
+            }
+            else {
+                self.parent.clone().unwrap().find_binding(name)
             }
         }
     }
@@ -141,7 +183,7 @@ impl EvalEnv {
             Value::ProcedureValue(_) => return Ok(expr),
             Value::LambdaValue(_, _, _) => return Ok(expr),
             Value::SymbolValue(s) => {
-                let item1 =  self.find_binding(&s);
+                let item1 =  self.clone().find_binding(&s);
                 if item1.is_some() {
                     return Ok(item1.unwrap().clone());
                 }
@@ -168,7 +210,7 @@ impl EvalEnv {
                 let v: Vec<Value> = exprs.to_vector().expect("Corruption when evaluating a list in fn <eval>");
                 match &v[0] {
                     Value::SymbolValue(s) => {
-                        match self.find_binding(s) {
+                        match self.clone().find_binding(s) {
                             None => {},
                             Some(Value::ProcedureValue(f)) => {
                                 let args: Vec<Value> = v[1..].iter().cloned().map(|value| self.clone().eval(value).expect("Corruption when evaluating a value in fn <eval>")).collect();
