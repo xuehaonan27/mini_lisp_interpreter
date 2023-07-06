@@ -1,6 +1,6 @@
 use std::hash::{Hash,Hasher};
-use crate::error:: ErrorToVector;
-pub type BuiltinFn = fn(Vec<Value>, Rc<EvalEnv>) -> Value;
+// use crate::error:: ErrorToVector;
+pub type BuiltinFn = fn(Vec<Value>, Rc<EvalEnv>) -> Result<Value, ErrorEval>;
 
 use std::fmt::Debug;
 #[derive(Clone)]
@@ -164,10 +164,11 @@ impl Hash for Value {
 }*/
 use std::rc::Rc;
 
+use crate::error::ErrorEval;
 use crate::eval_env::EvalEnv;
 impl Value {
-    pub fn to_vector(&self) -> Result<Vec<Self>, ErrorToVector> {
-        fn to_vector_recursive(expr: &Value, vec: &mut Vec<Rc<Value>>) -> Result<(), ErrorToVector>{
+    pub fn to_vector(&self) -> Result<Vec<Self>, ErrorEval> {
+        fn to_vector_recursive(expr: &Value, vec: &mut Vec<Rc<Value>>) -> Result<(), ErrorEval>{
             match expr {
                 Value::BooleanValue(_) => { vec.push(Rc::new(expr.clone())); Ok(()) },
                 Value::NumericValue(_) => { vec.push(Rc::new(expr.clone())); Ok(()) },
@@ -180,7 +181,7 @@ impl Value {
                     Ok(())
                 }
                 // _ => panic!("Invalid format when converting pairvalue to vector."),
-                _ => Err(ErrorToVector{message: String::from("Invalid format when converting pairvalue to vector.")}),
+                _ => Err(ErrorEval{message: format!("{}: [to_vector]: Invalid format when converting pairvalue to vector", 0), index: 0}),
             }
         }
         let mut vec: Vec<Rc<Value>> = Vec::new();

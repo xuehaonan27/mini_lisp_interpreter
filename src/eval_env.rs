@@ -31,7 +31,7 @@ impl EvalEnv {
             ("unquote".to_string(), unquote_form as SpecialForm),
         ]);
         let builtin_procs: HashMap<String, BuiltinFn> = HashMap::from([
-            ("apply".to_string(), apply as BuiltinFn),
+            /*("apply".to_string(), apply as BuiltinFn),
             ("print".to_string(), print as BuiltinFn),
             ("display".to_string(), display as BuiltinFn),
             ("displayln".to_string(), displayln as BuiltinFn),
@@ -59,7 +59,7 @@ impl EvalEnv {
             ("car".to_string(), car as BuiltinFn),
             ("cdr".to_string(), cdr as BuiltinFn),
             ("cons".to_string(), cons as BuiltinFn),
-            ("length".to_string(), length as BuiltinFn),
+            ("length".to_string(), length as BuiltinFn),*/
             ("list".to_string(), list as BuiltinFn),
             ("map".to_string(), map as BuiltinFn),
             ("map_expand".to_string(), map_expand as BuiltinFn),
@@ -179,7 +179,7 @@ impl EvalEnv {
             Value::BooleanValue(_) => return Ok(expr),
             Value::NumericValue(_) => return Ok(expr),
             Value::StringValue(_) => return Ok(expr),
-            Value::NilValue => panic!("Evaluating nil is prohibited."),
+            Value::NilValue => return Err(ErrorEval{message: format!("{}: [eval]: evaluate NilValue is prohibited", 0), index: 0}),
             Value::ProcedureValue(_) => return Ok(expr),
             Value::LambdaValue(_, _, _) => return Ok(expr),
             Value::SymbolValue(s) => {
@@ -201,74 +201,114 @@ impl EvalEnv {
                             return Ok(Value::ProcedureValue(Box::new(*item3.unwrap())));
                         }
                         else {
-                            panic!("Variable {s} not defined.");
+                            return Err(ErrorEval{message: format!("{}: [eval]: Variable {s} not defined", 0), index: 0});
                         }
                     }
                 }
             }
             exprs @ Value::PairValue(_, _) => {
-                let v: Vec<Value> = exprs.to_vector().expect("Corruption when evaluating a list in fn <eval>");
+                let v: Vec<Value> = exprs.to_vector().map_err(|error| ErrorEval{
+                    message: format!("{}: [eval]: Fail to convert a value to vector\n{}", error.index + 1, error.message),
+                    index: error.index + 1
+                })?;
                 match &v[0] {
                     Value::SymbolValue(s) => {
                         match self.clone().find_binding(s) {
                             None => {},
                             Some(Value::ProcedureValue(f)) => {
-                                let args: Vec<Value> = v[1..].iter().cloned().map(|value| self.clone().eval(value).expect("Corruption when evaluating a value in fn <eval>")).collect();
-                                return Ok(f(args, Rc::clone(&self)));
+                                let result_args: Result<Vec<Value>, ErrorEval> = v[1..].iter().cloned().map(|value| self.clone().eval(value)).collect();
+                                // let args: Vec<Value> = v[1..].iter().cloned().map(|value| self.clone().eval(value).expect("Corruption when evaluating a value in fn <eval>")).collect();
+                                let args = result_args.map_err(|error| ErrorEval{
+                                    message: format!("{}: [eval]: Fail to evaluate a value\n{}", error.index + 1, error.message),
+                                    index: error.index + 1
+                                })?;
+                                return f(args, Rc::clone(&self));
                             },
                             Some(Value::LambdaValue(params_in_lambda, body, env_in_lambda)) => {
-                                // println!("Calling a Lambda evaluation.");
-                                // v[1..].iter().for_each(|value| println!("{:?}", value));
-                                let args: Vec<Value> = v[1..].iter().map(|value| self.clone().eval(value.clone()).expect("Corruption when evaluating a value in env.eval: lambda.")).collect();
-                                // let env_derived: EvalEnv = env_in_lambda.derive(*params_in_lambda, v[1..].to_vec());
+                                //let args: Vec<Value> = v[1..].iter().map(|value| self.clone().eval(value.clone()).expect("Corruption when evaluating a value in env.eval: lambda.")).collect();
+                                // let args: Vec<Value> = v[1..].iter().map(|value| self.clone().eval(value.clone()).expect("Corruption when evaluating a value in env.eval: lambda.")).collect();
+                                // let result_args: Result<Vec<Value, ErrorEval> = v[1..].iter().map(|value| self.clone().eval(value.clone())).collect();
+                                let result_args: Result<Vec<Value>, ErrorEval >= v[1..].iter().map(|value| self.clone().eval(value.clone())).collect();
+                                let args = result_args.map_err(|error| ErrorEval{
+                                    message: format!("{}: [eval]: Fail to evaluate a value\n{}", error.index + 1, error.message),
+                                    index: error.index + 1
+                                })?;
                                 let env_derived: Rc<EvalEnv> = env_in_lambda.derive(*params_in_lambda, args).into();
                                 let mut result: Value = Value::NilValue;
                                 for bodyv in *body {
-                                    result = env_derived.clone().eval(bodyv).expect("Corruption when evaluating a value in fn <eval> part <lambda>");
+                                    result = env_derived.clone().eval(bodyv).map_err(|error| ErrorEval{
+                                        message: format!("{}: [eval]: Fail to evaluate a value\n{}", error.index + 1, error.message),
+                                        index: error.index + 1
+                                    })?;
                                 }
                                 return Ok(result);
                             },
-                            _ => panic!("Invalid format."),
+                            _ => return Err(ErrorEval{message: format!("{}: [eval]: Invalid format", 0), index: 0}),
                         }
                         if self.special_forms.contains_key(s) {
                             if *s == "unquote".to_string() {
-                                panic!("Calling unquote outside quasiquote is an undefined behavior.");
+                                // panic!("Calling unquote outside quasiquote is an undefined behavior.");
+                                return Err(ErrorEval{message: format!("{}: [eval]: Calling unquote outside quasiquote is an undefined behavior", 0), index: 0});
                             }
-                            return Ok(self.special_forms.get(s).unwrap()(v[1..].to_vec(), Rc::clone(&self)));
+                            return self.special_forms.get(s).unwrap()(v[1..].to_vec(), Rc::clone(&self));
                         }
                         else if self.builtin_procs.contains_key(s) {
-                            let args: Vec<Value> = v[1..].iter().cloned().map(|value| self.clone().eval(value).expect("Corruption when evaluating a value in fn <eval>")).collect();
-                            return Ok(self.builtin_procs.get(s).unwrap()(args, Rc::clone(&self)));
+                            // let args: Vec<Value> = v[1..].iter().cloned().map(|value| self.clone().eval(value).expect("Corruption when evaluating a value in fn <eval>")).collect();
+                            let result_args: Result<Vec<Value>, ErrorEval> = v[1..].iter().map(|value| self.clone().eval(value.clone())).collect();
+                            let args: Vec<Value> = result_args.map_err(|error| ErrorEval{
+                                message: format!("{}: [eval]: Fail to evaluate a value\n{}", error.index + 1, error.message),
+                                index: error.index + 1
+                            })?;
+                            return self.builtin_procs.get(s).unwrap()(args, Rc::clone(&self));
                         }
                         else {
-                            panic!("Name {s} not defined.");
+                            // panic!("Name {s} not defined.");
+                            return Err(ErrorEval{message: format!("{}: [eval]: Name {s} not defined", 0), index: 0});
                         }
 
                     },
                     Value::PairValue(_, _) => {
                         let mut new_vec: Vec<Value> = Vec::new();
-                        v.iter().for_each(|value| {
-                            new_vec.push(self.clone().eval(value.clone()).expect("Corruption when evaluating a value in fn <eval>"));
-                        });
-                        let new_expr: Value = list(new_vec, Rc::clone(&self));
+                        v.iter().try_for_each(|value| -> Result<(), ErrorEval>{
+                            let result_arg: Value = self.clone().eval(value.clone()).map_err(|error| ErrorEval{
+                                message: format!("{}: [eval]: Fail to evaluate a value\n{}", error.index + 1, error.message),
+                                index: error.index + 1
+                            })?;
+                            new_vec.push(result_arg);
+                            Ok(())
+                            // new_vec.push(self.clone().eval(value.clone()).expect("Corruption when evaluating a value in fn <eval>"));
+                        })?;
+                        let new_expr: Value = list(new_vec, Rc::clone(&self)).map_err(|error|ErrorEval{
+                            message: format!("{}: [eval]: Fail to pack the value\n{}", error.index + 1, error.message),
+                            index: error.index + 1
+                        })?;
                         self.eval(new_expr)
                     },
                     Value::ProcedureValue(f) => {
                         // let proc: Value = self.eval(v[0].clone());
                         // self.apply(proc, v[1..].to_vec())
-                        Ok(f(v[1..].to_vec(), Rc::clone(&self)))
+                        f(v[1..].to_vec(), Rc::clone(&self)).map_err(|error| ErrorEval {
+                            message: format!("{}: [eval]: Fail to call the given procedure\n{}", error.index + 1, error.message),
+                            index: error.index + 1
+                        })
                     },
                     Value::LambdaValue(params, body, env) => {
                         // let env_derived: Rc<EvalEnv> = env.derive(*params.clone(), v[1..].to_vec()).into();
                         let env_derived: Rc<EvalEnv> = env.clone().derive(*params.clone(), v[1..].to_vec()).into();
                         let mut result: Value = Value::NilValue;
                         for bodyv in *body.clone() {
-                            result = env_derived.clone().eval(bodyv).expect("Corruption when evaluating a value in fn <eval>");
+                            result = env_derived.clone().eval(bodyv).map_err(|error| ErrorEval{
+                                message: format!("{}: [eval]: Fail to evaluate a value\n{}", error.index + 1, error.message),
+                                index: error.index + 1
+                            })?;
                         }
                         return Ok(result);
                     },
                     _ => {
-                        panic!("Invalid format. Cannot evaluate it as a symbol or procedure.");
+                        return Err(ErrorEval {
+                            message: format!("{}: [eval]: Invalid format. Cannot evaluate it as a symbol or procedure", 0),
+                            index: 0
+                        })
                     },
                 }
             },

@@ -258,14 +258,14 @@ impl ReaderFile{
                         let result = self.process();
                         match result {
                             Err(e) => {
-                                eprintln!("{:?}", e);
+                                eprintln!("{}", e);
                                 self.flush();
                                 std::process::exit(127);
                             },
                             Ok(s) => {
                                 // println!("RESULT: {}", s);
                                 self.output(s, &mut writer).unwrap_or_else(|e|{
-                                    eprintln!("{:?}", e);
+                                    eprintln!("{}", e);
                                     self.flush();
                                     std::process::exit(127);
                                 });

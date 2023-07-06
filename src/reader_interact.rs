@@ -175,7 +175,7 @@ impl ReaderInteract {
                         self.flush();
                     }
                     else {
-                        eprintln!("Error: {:?}", result.err().unwrap());
+                        eprintln!("Error:\n{}", result.err().unwrap());
                         self.flush();
                     }
                 }

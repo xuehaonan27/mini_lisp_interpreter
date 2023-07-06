@@ -3,7 +3,7 @@ use std::error;
 use std::fmt;
 
 // 自定义错误类型
-#[derive(Debug)]
+/*#[derive(Debug)]
 pub struct ErrorToVector {
     pub message: String,
 }
@@ -17,11 +17,12 @@ impl Clone for ErrorToVector {
     fn clone(&self) -> Self {
         ErrorToVector { message: self.message.clone() }
     }
-}
+}*/
 
 #[derive(Debug)]
 pub struct ErrorEval {
-    message: String,
+    pub message: String,
+    pub index: usize,
 }
 impl fmt::Display for ErrorEval {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -31,7 +32,7 @@ impl fmt::Display for ErrorEval {
 impl error::Error for ErrorEval {}
 impl Clone for ErrorEval {
     fn clone(&self) -> Self {
-        ErrorEval { message: self.message.clone() }
+        ErrorEval { message: self.message.clone(), index: self.index}
     }
 }
 #[derive(Debug, PartialEq)]
