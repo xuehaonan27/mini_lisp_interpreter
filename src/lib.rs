@@ -6,3 +6,6 @@ pub mod builtins;
 pub mod special_forms;
 pub mod error;
 pub mod test_machine;
+pub mod reader_file;
+pub mod reader_interact;
+pub mod command_line;

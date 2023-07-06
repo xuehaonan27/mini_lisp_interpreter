@@ -1,8 +1,8 @@
 use crate::error::ErrorRead;
 use std::io;
 use crate::tokenizer::Tokenizer;
-use crate::Parser;
-use crate::EvalEnv;
+use crate::parse::Parser;
+use crate::eval_env::EvalEnv;
 use crate::error::ErrorEval;
 use std::io::Write;
 use std::rc::Rc;

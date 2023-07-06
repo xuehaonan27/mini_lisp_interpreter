@@ -62,32 +62,35 @@ pub fn define_form(args: Vec<Value>, mut env: Rc<EvalEnv>) -> Value {
             if env.symbol_map.borrow().contains_key(&s) {
                 let borrow = env.symbol_map.borrow();
                 let value: Option<&Value> = borrow.get(&args[1].to_string());
-
+                /*let value_done = value.unwrap().clone();
                 // 其实检查发现, 这三行就可以替换下面的那段代码
                 // 都已经contains_key了, 肯定能unwrap成功的.
                 let mut ref_of_map = env.symbol_map.borrow_mut();
                 _ = ref_of_map.insert(s, value.unwrap().clone());
-                println!("{:?}", ref_of_map);
-                /*if value.is_some() {
+                println!("{:?}", ref_of_map);*/
+                if value.is_some() {
+                    let value_to_be_inserted = value.unwrap().clone();
+                    std::mem::drop(borrow);
                     let mut ref_of_map = env.symbol_map.borrow_mut();
-                    _ = ref_of_map.insert(s, value.unwrap().clone());
-                    println!("{:?}", ref_of_map);
+                    _ = ref_of_map.insert(s, value_to_be_inserted);
+                    // println!("{:?}", ref_of_map);
                 }
                 else {
                     let value_to_be_inserted = env.clone().eval(args[1].clone()).expect("Corruption when evaluating a value in form <define>.");
+                    std::mem::drop(borrow);
                     let mut ref_of_map = env.symbol_map.borrow_mut();
                     _ = ref_of_map.insert(s, value_to_be_inserted);
                     // _ = ref_of_map.insert(s, temp_env.clone().eval(args[1].clone()).expect("Corruption when evaluating a value in form <define>."));
-                    println!("{:?}", ref_of_map);
-                }*/
+                    // println!("{:?}", ref_of_map);
+                }
             }
             else {
-                println!("Define entering here.");
+                // println!("Define entering here.");
                 let value_to_be_inserted = env.clone().eval(args[1].clone()).expect("Corruption when evaluating a value in form <define>.");
                 let mut ref_of_map = env.symbol_map.borrow_mut();
                 _ = ref_of_map.insert(s, value_to_be_inserted);
                 // _ = ref_of_map.insert(s, temp_env.eval(args[1].clone()).expect("Corruption when evaluating a value in form <define>."));
-                println!("{:?}", ref_of_map);
+                // println!("{:?}", ref_of_map);
             }
         },
         Value::PairValue(car, cdr) => {
@@ -97,7 +100,7 @@ pub fn define_form(args: Vec<Value>, mut env: Rc<EvalEnv>) -> Value {
                     lambda_args.append(&mut args[1..].to_vec());
                     let temp_env = env.clone();
                     _ = env.symbol_map.borrow_mut().insert(s, lambda_form(lambda_args, temp_env));
-                    println!("{:?}", env.symbol_map);
+                    // println!("{:?}", env.symbol_map);
                 },
                 _ => panic!("SyntaxError: Malformed define."),
             }

@@ -42,5 +42,6 @@ pub enum ErrorRead {
     EmptyLine,
     StreamFailure,
     Utf8ConversionError,
+    FileWriteError,
     EOF,
 }

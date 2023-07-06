@@ -1,4 +1,4 @@
-use std::io;
+use std::env;
 mod tokenizer;
 mod value;
 mod parse;
@@ -9,10 +9,6 @@ mod error;
 mod reader_interact;
 mod reader_file;
 mod command_line;
-use crate::reader_interact::ReaderInteract;
-use reader_file::ReaderFile;
-use crate::eval_env::EvalEnv;
-use crate::parse::Parser;
 
 fn main() {
     /*let a = Value::NumericValue(42.0);
@@ -59,9 +55,20 @@ fn main() {
         }).to_string());
     }*/
 
-    let mut reader_interact: ReaderInteract = ReaderInteract::new();
+    /*let mut reader_interact: ReaderInteract = ReaderInteract::new();
     reader_interact.call();
     // readline();
-    // let mut reader_file: ReaderFile = ReaderFile::new();
-    // reader_file.call();
+    let mut reader_file: ReaderFile = ReaderFile::new(None, None);
+    reader_file.call();*/
+
+    
+    let config = command_line::Config::build(env::args()).unwrap_or_else(|err|{
+        eprintln!("Problem parsing arguments: {err}");
+        std::process::exit(1);
+    });
+
+    if let Err(e) = command_line::run(config) {
+        eprintln!("Application error: {e}");
+        std::process::exit(1);
+    }
 }

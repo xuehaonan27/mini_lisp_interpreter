@@ -2,14 +2,13 @@ use std::fs::File;
 use std::io::Write;
 use std::result;
 use crate::error::ErrorRead;
-use crate::EvalEnv;
+use crate::eval_env::EvalEnv;
 use crate::tokenizer::Tokenizer;
-use crate::Parser;
+use crate::parse::Parser;
 use crate::error::ErrorEval;
-use crate::io::BufReader;
-use std::io::BufWriter;
-use std::io::BufRead;
+use std::io::{BufReader, BufRead, BufWriter};
 use std::rc::Rc;
+use std::io;
 pub struct ReaderFile {
     left_parenthesis_count: isize,
     is_inside_quote: bool,
@@ -178,18 +177,27 @@ impl ReaderFile{
         let result = self.env.clone().eval(value)?;
         Ok(result.to_string())
     }
-    fn output(&self, result: String, writer: Rc<Option<BufWriter<File>>>) -> () {
+    fn output(&self, result: String, writer: &mut Option<BufWriter<File>>) -> io::Result<()> {
         if result == "()".to_string() {
-            return;
+            return Ok(());
         }
-        let result_u8: &[u8] = result.as_bytes();
-        /*if self.have_output_file {
-            writer.unwrap().write(result_u8);
+        println!("{}",self.have_output_file);
+        if self.have_output_file {
+            // let mut writer = BufWriter::new(file.as_ref().unwrap());
+            let writer: &mut BufWriter<File> = writer.as_mut().unwrap();
+            // 将标准输出重定向到文件
+            // io::stdout().flush()?;
+            // let stdout = io::stdout();
+            // let mut _handle = stdout.lock();
+            // write!(writer.unwrap(), format!"{result}")?;
+            write!(writer, "{result}")?;
+            writer.flush()?;
+            return Ok(());
         }
         else {
             println!("{}", result);
-        }*/
-        println!("{}", result);
+        }
+        return Ok(())
     }
     fn flush(&mut self) -> () {
         self.line.clear();
@@ -212,7 +220,7 @@ impl ReaderFile{
                 reader = r;
             }
         }
-        let mut writer: Rc<Option<BufWriter<File>>> = Rc::new(None);
+        let mut writer: Option<BufWriter<File>> = None;
         if self.have_output_file {
             let open_output_result = self.open_output_file();
             match open_output_result {
@@ -222,18 +230,15 @@ impl ReaderFile{
                     std::process::exit(127);
                 }
                 Ok(w) => {
-                    writer = Rc::new(Some(w));
+                    writer = Some(w);
                 }
             }
         }
         
-        let mut line_count: isize = 0;
         if self.enable {
             println!("Execute step by step. Press ENTER to continue.");
         }
         loop {
-            line_count += 1;
-            // println!("{}", line_count);
             let read_status = self.readline(&mut reader);
             match read_status {
                 Err(ErrorRead::EOF) => {
@@ -247,16 +252,9 @@ impl ReaderFile{
                     self.flush();
                     std::process::exit(127);
                 },
-                Ok(()) => {   
-                    // println!("{}", self.line);   
-                    // println!("{}", self.left_parenthesis_count);              
+                Ok(()) => {              
                     if self.left_parenthesis_count == 0 {
-                        /*if self.enable {
-                            todo!();
-                        }
-                        if self.have_output_file {
-                            todo!();
-                        }*/
+                        println!("INPUT LINE: {}", self.line);
                         let result = self.process();
                         match result {
                             Err(e) => {
@@ -265,15 +263,14 @@ impl ReaderFile{
                                 std::process::exit(127);
                             },
                             Ok(s) => {
-                                self.output(s, Rc::clone(&writer));
+                                println!("RESULT: {}", s);
+                                self.output(s, &mut writer).unwrap_or_else(|e|{
+                                    eprintln!("{:?}", e);
+                                    self.flush();
+                                    std::process::exit(127);
+                                });
                             },
                         }
-                        /*if self.have_output_file {
-                            todo!();
-                        }
-                        if self.enable {
-                            todo!();
-                        }*/
                         self.flush();
                     }
                 },
