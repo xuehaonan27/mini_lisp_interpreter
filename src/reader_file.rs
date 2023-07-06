@@ -1,6 +1,5 @@
 use std::fs::File;
 use std::io::Write;
-use std::result;
 use crate::error::ErrorRead;
 use crate::eval_env::EvalEnv;
 use crate::tokenizer::Tokenizer;

@@ -4,43 +4,52 @@ use std::process;
 use std::panic;
 use std::rc::Rc;
 use crate::error::ErrorEval;
-/*
+
 pub fn apply(params: Vec<Value>, env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 2{
-        panic!("SyntaxError: Missing argument in procedure <apply>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <apply>: Missing argument", 0), index: 0 });
     }
     else if params.len() > 2 {
-        panic!("SyntaxError: Too many argument in procedure <apply>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <apply>: Too many argument", 0), index: 0 });
     }
     else {
         match params[0].clone() {
             Value::ProcedureValue(f) => {
                 // let args: Vec<Value> = params[1..].iter().cloned().map(|value| env.eval(value)).collect();
-                let args: Vec<Value> = params[1].to_vector().expect("Corruption when converting a value to vector in procedure <apply>.");
+                let args: Vec<Value> = params[1].to_vector().map_err(|error| ErrorEval{
+                    message: format!("{}: Builtin Procedure <apply>: Fail to convert a value to vector\n{}", error.index + 1, error.message),
+                    index: error.index + 1
+                })?;
                 return f(args, env);
             },
             Value::LambdaValue(params_in_lambda, body, env) => {
-                let env_derived: Rc<EvalEnv> = env.derive(*params_in_lambda, params[1].to_vector().expect("Corruption when converting a value to vector in procedure <apply>.")).into();
+                let env_derived: Rc<EvalEnv> = env.derive(*params_in_lambda, params[1].to_vector().map_err(|error| ErrorEval{
+                    message: format!("{}: Builtin Procedure <apply>: Fail to convert a value to vector\n{}", error.index + 1, error.message),
+                    index: error.index + 1
+                })?).into();
                 let mut result: Value = Value::NilValue;
                 for bodyv in *body {
-                    result = env_derived.clone().eval(bodyv).expect("Corruption when evaluating a value in procedure <apply>.");
+                    result = env_derived.clone().eval(bodyv).map_err(|error| ErrorEval{
+                        message: format!("{}: Builtin Procedure <apply>: Fail to evaluate a value\n{}", error.index + 1, error.message),
+                        index: error.index + 1
+                    })?
                 }
-                return result;
+                return Ok(result);
             },
-            _ => panic!("Cannot evaluate the expression as a procedure."),
+            _ => return Err(ErrorEval { message: format!("{}: Builtin Procedure <apply>: Fail to evaluate a value", 0), index: 0 }),
         }
     }
 }
 pub fn print(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     params.iter().for_each(|param| println!("{}", param.to_string()));
-    Value::NilValue  
+    Ok(Value::NilValue)
 }
 pub fn display(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
-        panic!("SyntaxError: Missing argument in procedure <display>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <display>: Missing argument", 0), index: 0 });
     }
     else if params.len() > 1 {
-        panic!("SyntaxError: Too many argument in procedure <display>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <display>: Too many argument", 0), index: 0 });
     }
     else {
         match params[0].clone() {
@@ -51,15 +60,15 @@ pub fn display(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval
                 print!("{}", v.to_string());
             }
         }
-        Value::NilValue
+        Ok(Value::NilValue)
     }
 }
 pub fn displayln(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
-        panic!("SyntaxError: Missing argument in procedure <display>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <displayln>: Missing argument", 0), index: 0 });
     }
     else if params.len() > 1 {
-        panic!("SyntaxError: Too many argument in procedure <display>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <displayln>: Too many argument", 0), index: 0 });
     }
     else {
         match params[0].clone() {
@@ -70,12 +79,12 @@ pub fn displayln(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEv
                 println!("{}", v.to_string());
             }
         }
-        Value::NilValue
+        Ok(Value::NilValue)
     }
 }
 pub fn error(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() > 1 {
-        panic!("SyntaxError: Too many argument in procedure <display>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <error>: Too many argument", 0), index: 0 });
     }
     else if params.len() == 1 {
         panic!("{}", params[0].to_string());
@@ -86,13 +95,16 @@ pub fn error(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> 
 }
 pub fn eval(params: Vec<Value>, env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
-        panic!("SyntaxError: Missing argument in procedure <eval>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <eval>: Missing argument", 0), index: 0 });
     }
     else if params.len() > 1 {
-        panic!("SyntaxError: Too many argument in procedure <eval>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <eval>: Too many argument", 0), index: 0 });
     }
     else {
-        env.eval(params[0].clone()).expect("Corruption when evaluating a value in procedure <eval>.")
+        env.eval(params[0].clone()).map_err(|error| ErrorEval{
+            message: format!("{}: Builtin Procedure <eval>: Fail to evaluate a value\n{}", error.index + 1, error.message),
+            index: error.index + 1
+        })
     }
 }
 /// 非安全退出. 
@@ -103,12 +115,13 @@ pub fn exit(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
         process::exit(0);
     }
     else if params.len() > 1 {
-        panic!("SyntaxError: Too many argument in procedure <exit>");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <exit>: Too many argument", 0), index: 0 });
     }
     else {
         match params[0].clone() {
             Value::NumericValue(n) => process::exit(n as i32),
-            _ => panic!("SyntaxError: Non integer exit code is forbidden"),
+            // _ => panic!("SyntaxError: Non integer exit code is forbidden"),
+            _ => return Err(ErrorEval { message: format!("{}: Builtin Procedure <exit>: Non integer exit code is forbidden", 0), index: 0 }),
         }
     }
 }
@@ -135,163 +148,166 @@ pub fn exit_force(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorE
 pub fn newline(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.is_empty() {
         println!();
-        Value::NilValue
+        Ok(Value::NilValue)
     }
     else {
-        panic!("SyntaxError: Cannot append argument to procedure <newline>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <newline>: Cannot append argument", 0), index: 0 });
     }
 }
 
 pub fn atom_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
-        panic!("SyntaxError: Missing argument in procedure <atom?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <atom?>: Missing argument", 0), index: 0 });
     }
     else if params.len() > 1 {
-        panic!("SyntaxError: Too many argument in procedure <atom?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <atom?>: Too many argument", 0), index: 0 });
     }
     else {
         match params[0] {
-            Value::BooleanValue(_) => return Value::BooleanValue(true),
-            Value::NumericValue(_) => return Value::BooleanValue(true),
-            Value::StringValue(_) => return Value::BooleanValue(true),
-            Value::SymbolValue(_) => return Value::BooleanValue(true),
-            Value::NilValue => return Value::BooleanValue(true),
-            _ => return Value::BooleanValue(false),
+            Value::BooleanValue(_) => return Ok(Value::BooleanValue(true)),
+            Value::NumericValue(_) => return Ok(Value::BooleanValue(true)),
+            Value::StringValue(_) => return Ok(Value::BooleanValue(true)),
+            Value::SymbolValue(_) => return Ok(Value::BooleanValue(true)),
+            Value::NilValue => return Ok(Value::BooleanValue(true)),
+            _ => return Ok(Value::BooleanValue(false)),
         }
     }
 }
 pub fn boolean_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
-        panic!("SyntaxError: Missing argument in procedure <boolean?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <boolean?>: Missing argument", 0), index: 0 });
     }
     else if params.len() > 1 {
-        panic!("SyntaxError: Too many argument in procedure <boolean?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <boolean?>: Too many argument", 0), index: 0 });
     }
     else {
         match params[0] {
-            Value::BooleanValue(_) => return Value::BooleanValue(true),
-            _ => return Value::BooleanValue(false),
+            Value::BooleanValue(_) => return Ok(Value::BooleanValue(true)),
+            _ => return Ok(Value::BooleanValue(false)),
         }
     }
 }
 pub fn integer_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
-        panic!("SyntaxError: Missing argument in procedure <integer?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <integer?>: Missing argument", 0), index: 0 });
     }
     else if params.len() > 1 {
-        panic!("SyntaxError: Too many argument in procedure <integer?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <integer?>: Too many argument", 0), index: 0 });
     }
     else {
         match params[0].clone() {
             Value::NumericValue(n) => {
                 if is_integer(&n) {
-                    return Value::BooleanValue(true);
+                    return Ok(Value::BooleanValue(true));
                 }
                 else {
-                    return Value::BooleanValue(false);
+                    return Ok(Value::BooleanValue(false));
                 }
             },
-            _ => return Value::BooleanValue(false),
+            _ => return Ok(Value::BooleanValue(false)),
         }
     }
 }
 pub fn list_or_not(params: Vec<Value>, env: Rc<EvalEnv>) -> Result<Value, ErrorEval>{
     if params.len() < 1 {
-        panic!("SyntaxError: Missing argument in procedure <list?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <list?>: Missing argument", 0), index: 0 });
     }
     else if params.len() > 1 {
-        panic!("SyntaxError: Too many argument in procedure <list?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <list?>: Too many argument", 0), index: 0 });
     }
     else {
         match params[0].clone() {
-            Value::NilValue => return Value::BooleanValue(true),
-            Value::PairValue(_, cdr) => return list_or_not(vec![*cdr], env),
-            _ => return Value::BooleanValue(false),
+            Value::NilValue => return Ok(Value::BooleanValue(true)),
+            Value::PairValue(_, cdr) => return list_or_not(vec![*cdr], env).map_err(|error| ErrorEval {
+                message: format!("{}: Builtin Procedure <list?>: Recursivly finding error...\n{}", error.index + 1, error.message),
+                index: error.index + 1
+            }),
+            _ => return Ok(Value::BooleanValue(false)),
         }
     }
 }
 pub fn number_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
-        panic!("SyntaxError: Missing argument in procedure <number?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <number?>: Missing argument", 0), index: 0 });
     }
     else if params.len() > 1 {
-        panic!("SyntaxError: Too many argument in procedure <number?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <number?>: Too many argument", 0), index: 0 });
     }
     else {
         match params[0] {
-            Value::NumericValue(_) => return Value::BooleanValue(true),
-            _ => return Value::BooleanValue(false),
+            Value::NumericValue(_) => return Ok(Value::BooleanValue(true)),
+            _ => return Ok(Value::BooleanValue(false)),
         }
     }
 }
 pub fn null_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
-        panic!("SyntaxError: Missing argument in procedure <null?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <null?>: Missing argument", 0), index: 0 });
     }
     else if params.len() > 1 {
-        panic!("SyntaxError: Too many argument in procedure <null?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <null?>: Too many argument", 0), index: 0 });
     }
     else {
         match params[0] {
-            Value::NilValue => return Value::BooleanValue(true),
-            _ => return Value::BooleanValue(false),
+            Value::NilValue => return Ok(Value::BooleanValue(true)),
+            _ => return Ok(Value::BooleanValue(false)),
         }
     }
 }
 pub fn pair_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
-        panic!("SyntaxError: Missing argument in procedure <pair?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <pair?>: Missing argument", 0), index: 0 });
     }
     else if params.len() > 1 {
-        panic!("SyntaxError: Too many argument in procedure <pair?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <pair?>: Too many argument", 0), index: 0 });
     }
     else {
         match params[0] {
-            Value::PairValue(_, _) => return Value::BooleanValue(true),
-            _ => return Value::BooleanValue(false),
+            Value::PairValue(_, _) => return Ok(Value::BooleanValue(true)),
+            _ => return Ok(Value::BooleanValue(false)),
         }
     }
 }
 pub fn procedure_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
-        panic!("SyntaxError: Missing argument in procedure <procedure?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <procedure?>: Missing argument", 0), index: 0 });
     }
     else if params.len() > 1 {
-        panic!("SyntaxError: Too many argument in procedure <procedure?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <procedure?>: Too many argument", 0), index: 0 });
     }
     else {
         match params[0] {
-            Value::ProcedureValue(_) => return Value::BooleanValue(true),
-            Value::LambdaValue(_, _, _) => return Value::BooleanValue(true),
-            _ => return Value::BooleanValue(false),
+            Value::ProcedureValue(_) => return Ok(Value::BooleanValue(true)),
+            Value::LambdaValue(_, _, _) => return Ok(Value::BooleanValue(true)),
+            _ => return Ok(Value::BooleanValue(false)),
         }
     }
 }
 pub fn string_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
-        panic!("SyntaxError: Missing argument in procedure <string?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <string?>: Missing argument", 0), index: 0 });
     }
     else if params.len() > 1 {
-        panic!("SyntaxError: Too many argument in procedure <string?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <string?>: Too many argument", 0), index: 0 });
     }
     else {
         match params[0] {
-            Value::StringValue(_) => return Value::BooleanValue(true),
-            _ => return Value::BooleanValue(false),
+            Value::StringValue(_) => return Ok(Value::BooleanValue(true)),
+            _ => return Ok(Value::BooleanValue(false)),
         }
     }
 }
 pub fn symbol_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
-        panic!("SyntaxError: Missing argument in procedure <symbol?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <symbol?>: Missing argument", 0), index: 0 });
     }
     else if params.len() > 1 {
-        panic!("SyntaxError: Too many argument in procedure <symbol?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <symbol?>: Too many argument", 0), index: 0 });
     }
     else {
         match params[0] {
-            Value::SymbolValue(_) => return Value::BooleanValue(true),
-            _ => return Value::BooleanValue(false),
+            Value::SymbolValue(_) => return Ok(Value::BooleanValue(true)),
+            _ => return Ok(Value::BooleanValue(false)),
         }
     }
 }
@@ -299,17 +315,17 @@ pub fn symbol_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, Err
 /// 检查某个符号是否已经在当前环境绑定
 pub fn defined_local_or_not(params: Vec<Value>, env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
-        panic!("SyntaxError: Missing argument in procedure <defined_local?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <defined_local?>: Missing argument", 0), index: 0 });
     }
     else if params.len() > 1 {
-        panic!("SyntaxError: Too many argument in procedure <defined_local?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <defined_local?>: Too many argument", 0), index: 0 });
     }
     else {
         if env.symbol_map.borrow().contains_key(&params[0].to_string()) {
-            return Value::BooleanValue(true);
+            return Ok(Value::BooleanValue(true));
         }
         else {
-            return Value::BooleanValue(false);
+            return Ok(Value::BooleanValue(false));
         }
     }
 }
@@ -317,18 +333,18 @@ pub fn defined_local_or_not(params: Vec<Value>, env: Rc<EvalEnv>) -> Result<Valu
 /// 检查某个符号是否已经在所有可见环境内绑定
 pub fn defined_all_or_not(params: Vec<Value>, env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
-        panic!("SyntaxError: Missing argument in procedure <defined_all?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <defined_all?>: Missing argument", 0), index: 0 });
     }
     else if params.len() > 1 {
-        panic!("SyntaxError: Too many argument in procedure <defined_all?>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <defined_all?>: Too many argument", 0), index: 0 });
     }
     else {
         let bind = env.find_binding(&params[0].to_string());
         if bind.is_some() {
-            return Value::BooleanValue(true);
+            return Ok(Value::BooleanValue(true));
         }
         else {
-            return Value::BooleanValue(false);
+            return Ok(Value::BooleanValue(false));
         }
     }
 }
@@ -348,13 +364,16 @@ pub fn append(params: Vec<Value>, env: Rc<EvalEnv>) -> Result<Value, ErrorEval> 
                     ret.append(result.unwrap().as_mut());
                 }
                 else {
-                    panic!("Cannot append a procedure value.");
+                    return Err(ErrorEval { message: format!("{}: Builtin Procedure <append>: Cannot append a procedure value", 0), index: 0 });
                 }
             },
-            _ => panic!("Cannot append a procedure value."),
+            _ => return Err(ErrorEval { message: format!("{}: Builtin Procedure <append>: Cannot append a procedure value", 0), index: 0 }),
         }
     }
-    list(ret, env)
+    list(ret, env).map_err(|error| ErrorEval {
+        message: format!("{}: Builtin Procedure <append>: Fail to pack the result\n{}", error.index + 1, error.message),
+        index: error.index + 1
+    })
 }
 /// ( push list value ) 自定义过程
 /// 将 value 加入到 list 末尾
@@ -373,83 +392,92 @@ pub fn push(params: Vec<Value>, env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
                     ret.append(result.unwrap().as_mut());
                 }
                 else {
-                    panic!("Cannot append a procedure value.");
+                    // panic!("Cannot append a procedure value.");
+                    return Err(ErrorEval { message: format!("{}: Builtin Procedure <push>: Cannot append a procedure value", 0), index: 0 });
                 }
             },
             Value::BooleanValue(_) => ret.push(param),
             Value::NumericValue(_) => ret.push(param),
             Value::StringValue(_) => ret.push(param),
             Value::SymbolValue(_) => ret.push(param),
-            _ => panic!("Cannot append a procedure value."),
+            _ => return Err(ErrorEval { message: format!("{}: Builtin Procedure <push>: Cannot append a procedure value", 0), index: 0 }),
         }
     }
-    list(ret, env)
+    list(ret, env).map_err(|error| ErrorEval {
+        message: format!("{}: Builtin Procedure <push>: Fail to pack the result\n{}", error.index + 1, error.message),
+        index: error.index + 1
+    })
 }
 pub fn car(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
-        panic!("SyntaxError: Missing argument in procedure <car>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <car>: Missing argument", 0), index: 0 });
     }
     else if params.len() > 1 {
-        panic!("SyntaxError: Too many argument in procedure <car>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <car>: Too many argument", 0), index: 0 });
     }
     else {
         match params[0].clone() {
-            Value::PairValue(car, _) => return *car,
-            _ => panic!("Cannot get car of a non-pair/list type value."),
+            Value::PairValue(car, _) => return Ok(*car),
+            // _ => panic!("Cannot get car of a non-pair/list type value."),
+            _ => return Err(ErrorEval { message: format!("{}: Builtin Procedure <length>: Cannot get car of a non-pair/list type value", 0), index: 0 })
         }
     }
 }
 pub fn cdr(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
-        panic!("SyntaxError: Missing argument in procedure <car>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <cdr>: Missing argument", 0), index: 0 });
     }
     else if params.len() > 1 {
-        panic!("SyntaxError: Too many argument in procedure <car>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <cdr>: Too many argument", 0), index: 0 });
     }
     else {
         match params[0].clone() {
-            Value::PairValue(_, cdr) => return *cdr,
-            _ => panic!("Cannot get car of a non-pair/list type value."),
+            Value::PairValue(_, cdr) => return Ok(*cdr),
+            // _ => panic!("Cannot get car of a non-pair/list type value."),
+            _ => return Err(ErrorEval { message: format!("{}: Builtin Procedure <length>: Cannot get cdr of a non-pair/list type value", 0), index: 0 })
         }
     }
 }
 pub fn cons(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 2 {
-        panic!("SyntaxError: Missing argument in procedure <cons>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <cons>: Missing argument", 0), index: 0 });
     }
     else if params.len() > 2 {
-        panic!("SyntaxError: Too many argument in procedure <cons>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <cons>: Too many argument", 0), index: 0 });
     }
     else {
-        Value::PairValue(Box::new(params[0].clone()), Box::new(params[1].clone()))
+        Ok(Value::PairValue(Box::new(params[0].clone()), Box::new(params[1].clone())))
     }
 }
 pub fn length(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
-        panic!("SyntaxError: Missing argument in procedure <length>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <length>: Missing argument", 0), index: 0 });
     }
     else if params.len() > 1 {
-        panic!("SyntaxError: Too many argument in procedure <length>.");
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <length>: Too many argument", 0), index: 0 });
     } 
     else {
         match params[0] {
             Value::PairValue(_, _) => {
-                let vec: Vec<Value> = params[0].to_vector().expect("Fail to convert params into vector in procudure <length>.");
+                let vec: Vec<Value> = params[0].to_vector().map_err(|error| ErrorEval{
+                    message: format!("{}: Builtin Procedure <length>: Missing argument\n{}", error.index + 1, error.message),
+                    index: error.index + 1
+                })?;
                 if vec.len() == 1  {
                     match vec[0] {
-                        Value::NilValue => return Value::NumericValue(0f64),
+                        Value::NilValue => return Ok(Value::NumericValue(0f64)),
                         _ => {},
                     }
                 }
-                return Value::NumericValue(vec.len() as f64);
+                return Ok(Value::NumericValue(vec.len() as f64));
             },
             _ => {
-                panic!("TypeError. Cannot get length of a non-list value.");
+                // panic!("TypeError. Cannot get length of a non-list value.");
+                return Err(ErrorEval { message: format!("{}: Builtin Procedure <length>: Cannot get length of a non-list value", 0), index: 0 })
             },
         }
     }
 }
-*/
 pub fn list(params: Vec<Value>, env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.is_empty() {
         Ok(Value::NilValue)
@@ -471,22 +499,48 @@ pub fn map(params: Vec<Value>, env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
             let mut results: Vec<Value> = Vec::new();
             match params[0].clone() {
                 Value::ProcedureValue(f) => {
-                    args.unwrap().iter().clone().for_each(|arg| results.push(f(vec![arg.clone()], Rc::clone(&env)).expect("To be implemented")));
+                    args.unwrap().iter().clone().try_for_each(|arg| -> Result<(), ErrorEval> {
+                        let arg: Value = f(vec![arg.clone()], Rc::clone(&env)).map_err(|error| ErrorEval{
+                            message: format!("{}: Builtin Procedure <map>: Fail to call the given procedure\n{}", error.index + 1, error.message),
+                            index: error.index + 1
+                        })?;
+                        results.push(arg);
+                        Ok(())
+                    })?;
                     return list(results, Rc::clone(&env));
                 }
                 Value::LambdaValue(params, body, env_in_lambda) => {
-                    args.unwrap().iter().clone().for_each(|arg| results.push(
-                        {
+                    args.unwrap().iter().clone().try_for_each(|arg| -> Result<(), ErrorEval>{
+                        let arg: Value = {
                             let args_in_lambda = vec![arg.clone()];
                             let env_derived: Rc<EvalEnv> = env_in_lambda.clone().derive(*params.clone(), args_in_lambda).into();
                             let mut result: Value = Value::NilValue;
                             for bodyv in *body.clone() {
-                                result = env_derived.clone().eval(bodyv).expect("Corruption when evaluating a value in procedure <map>");
+                                result = env_derived.clone().eval(bodyv).map_err(|error| ErrorEval{
+                                    message: format!("{}: Builtin Procedure <map>: Fail to evaluate a value\n{}", error.index + 1, error.message),
+                                    index: error.index + 1
+                                })?;
                             }
                             result
-                        }
-                    ));
+                        };
+                        results.push(arg);
+                        Ok(())
+                    })?;
                     return list(results, env);
+
+                    /*results = args.unwrap().iter().cloned().map(|arg| -> Value {
+                        let args_in_lambda = vec![arg.clone()];
+                        let env_derived: Rc<EvalEnv> = env_in_lambda.clone().derive(*params.clone(), args_in_lambda).into();
+                        let mut result: Value = Value::NilValue;
+                        for bodyv in *body.clone() {
+                            result = env_derived.clone().eval(bodyv).map_err(|error| ErrorEval{
+                                message: format!("{}: Builtin Procedure <map>: Fail to evaluate a value\n{}", error.index + 1, error.message),
+                                index: error.index + 1
+                            })?;
+                        }
+                        arg
+                    }).collect();
+                    return list(results, env);*/
                 },
                 _ => return Err(ErrorEval{ message: format!("{}: Builtin Procedure <map_expand>: Need a procedure", 0), index: 0}),
             }
@@ -503,24 +557,35 @@ pub fn map_expand(params: Vec<Value>, env: Rc<EvalEnv>) -> Result<Value, ErrorEv
     let mut size: Option<usize> = None;
     let mut vecs: Vec<Vec<Value>> = Vec::new();
     let mut results: Vec<Value> = Vec::new();
-    params[1..].iter().for_each(|param|
+    params[1..].iter().try_for_each(|param|->Result<(), ErrorEval> {
         match param {
             Value::PairValue(_, _) => {
-                let vec = param.to_vector().expect("Corruption when converting a value to vector in procedure <map_expand>.");
-                if size.is_none() { size = Some(vec.len()); vecs.push(vec);}
+                // let vec = param.to_vector().expect("Corruption when converting a value to vector in procedure <map_expand>.");
+                let vec=  param.to_vector().map_err(|error| ErrorEval{
+                    message: format!("{}: Builtin Procedure <map_expand>: Fail to convert a value to vector\n{}", error.index + 1, error.message),
+                    index: error.index + 1
+                })?;
+                if size.is_none() { size = Some(vec.len()); vecs.push(vec); Ok(())}
                 else if size != Some(vec.len()) {
-                    panic!("Error size in procedure <map_expand>: lists should have the same size.");
+                    // panic!("Error size in procedure <map_expand>: lists should have the same size.");
+                    return Err(ErrorEval { message: format!("{}: Builtin Procedure <map_expand>: Lists should have the same size", 0), index: 0 })
                 }
-                else { vecs.push(vec); }
+                else { vecs.push(vec); Ok(())}
             },
-            _ => panic!("Error type in procedure <map_expand>: need a procedure."),
+            // _ => panic!("Error type in procedure <map_expand>: need a procedure."),
+            _ => return Err(ErrorEval { message: format!("{}: Builtin Procedure <map_expand>: Need a procedure", 0), index: 0 }),
         }
-    );
+    })?;
     for i in 0..size.unwrap() {
         let mut temp_args: Vec<Value> = Vec::new();
-        vecs.iter().for_each(|vec|
-            temp_args.push(env.clone().eval(vec[i].clone()).expect("Corruption when evaluating a value in procedure <map_expand>."))
-        );
+        vecs.iter().try_for_each(|vec| -> Result<(), ErrorEval> {
+            let arg: Value = env.clone().eval(vec[i].clone()).map_err(|error| ErrorEval{
+                message: format!("{}: Builtin Procedure <map_expand>: Need a procedure\n{}", error.index + 1, error.message),
+                index: error.index + 1,
+            })?;
+            temp_args.push(arg);
+            Ok(())
+        })?;
         match params[0].clone() {
             Value::ProcedureValue(f) => {
                 let result = f(temp_args, Rc::clone(&env)).map_err(|error| ErrorEval{

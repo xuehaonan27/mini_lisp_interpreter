@@ -1,12 +1,11 @@
 use crate::builtins::list;
 use crate::value::Value;
 use crate::eval_env::EvalEnv;
-use std::error::Error;
 use std::rc::Rc;
 use crate::error::ErrorEval;
 pub type SpecialForm = fn(Vec<Value>, Rc<EvalEnv>) -> Result<Value, ErrorEval>;
 
-pub fn define_form(args: Vec<Value>, mut env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
+pub fn define_form(args: Vec<Value>, env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if args.len() < 2 {
         // panic!("SyntaxError: Missing parameter in form <define>.");
         return Err(ErrorEval {

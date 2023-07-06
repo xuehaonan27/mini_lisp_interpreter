@@ -31,7 +31,7 @@ impl EvalEnv {
             ("unquote".to_string(), unquote_form as SpecialForm),
         ]);
         let builtin_procs: HashMap<String, BuiltinFn> = HashMap::from([
-            /*("apply".to_string(), apply as BuiltinFn),
+            ("apply".to_string(), apply as BuiltinFn),
             ("print".to_string(), print as BuiltinFn),
             ("display".to_string(), display as BuiltinFn),
             ("displayln".to_string(), displayln as BuiltinFn),
@@ -59,7 +59,7 @@ impl EvalEnv {
             ("car".to_string(), car as BuiltinFn),
             ("cdr".to_string(), cdr as BuiltinFn),
             ("cons".to_string(), cons as BuiltinFn),
-            ("length".to_string(), length as BuiltinFn),*/
+            ("length".to_string(), length as BuiltinFn),
             ("list".to_string(), list as BuiltinFn),
             ("map".to_string(), map as BuiltinFn),
             ("map_expand".to_string(), map_expand as BuiltinFn),
@@ -112,7 +112,7 @@ impl EvalEnv {
         let symbol_map = RefCell::new(symbol_map);
         Self {symbol_map, parent, special_forms, builtin_procs}
     }
-    pub fn find_binding(mut self: Rc<EvalEnv>, name: &String) -> Option<Value> {
+    pub fn find_binding(self: Rc<EvalEnv>, name: &String) -> Option<Value> {
         /* let temp_env = env.clone();
             if temp_env.symbol_map.borrow().contains_key(&s) {
                 let borrow = temp_env.symbol_map.borrow();

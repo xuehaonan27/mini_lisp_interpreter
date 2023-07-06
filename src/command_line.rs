@@ -38,7 +38,7 @@ impl Config {
         let mut interract_mode: bool = false;
         let mut open_help: bool = false;
         let mut input_file_path: Option<String> = None;
-        let mut output_file_path: Option<String> = None;
+        let output_file_path: Option<String> = None;
         args.next();
         loop {
             match args.next() {
