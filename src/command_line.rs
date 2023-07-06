@@ -1,7 +1,7 @@
 use std::error::Error;
 use crate::reader_interact::ReaderInteract;
 use crate::reader_file::ReaderFile;
-const HELP_FILE: &str = "This is the helping file.";
+const HELP_FILE: &str = "-i | --interract 交互式\n-h | --help 打开该说明文档\n-f | --file 文件模式, 并且附上输入文件路径\n输入> 后接文件名可将输出导入至该文件.";
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     match (config.interract_mode, config.open_help, config.input_file_path, config.output_file_path) {
         (true, false, None, None) => {
@@ -51,12 +51,13 @@ impl Config {
                         Some(path) => input_file_path = Some(path),
                     }
                 },
-                Some(s) if s == "-o".to_string() || s == "--output".to_string() => {
+                /*Some(s) if s == "-o".to_string() || s == "--output".to_string() => {
                     match args.next() {
                         None => return Err("Should give an output file path"),
                         Some(path) => output_file_path = Some(path),
                     }
-                },
+                },*/
+                Some(s) if s == "-o".to_string() || s == "--output".to_string() => return Err("Unknown"),
                 _ => return Err("Fail to parse the command, please retry"),
             }
         }

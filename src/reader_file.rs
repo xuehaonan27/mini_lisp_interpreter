@@ -254,7 +254,7 @@ impl ReaderFile{
                 },
                 Ok(()) => {              
                     if self.left_parenthesis_count == 0 {
-                        println!("INPUT LINE: {}", self.line);
+                        // println!("INPUT LINE: {}", self.line);
                         let result = self.process();
                         match result {
                             Err(e) => {
@@ -263,7 +263,7 @@ impl ReaderFile{
                                 std::process::exit(127);
                             },
                             Ok(s) => {
-                                println!("RESULT: {}", s);
+                                // println!("RESULT: {}", s);
                                 self.output(s, &mut writer).unwrap_or_else(|e|{
                                     eprintln!("{:?}", e);
                                     self.flush();
