@@ -1,8 +1,17 @@
+/// 定义解释器内"值"的概念
+/// 解释器执行的时候内部所有表达都是以"值"的形式进行传递的
+
 use std::hash::{Hash,Hasher};
-// use crate::error:: ErrorToVector;
+use std::fmt::Debug;
+use std::rc::Rc;
+use crate::error::ErrorEval;
+use crate::eval_env::EvalEnv;
 pub type BuiltinFn = fn(Vec<Value>, Rc<EvalEnv>) -> Result<Value, ErrorEval>;
 
-use std::fmt::Debug;
+/// 值类型
+/// 布尔字面量, 数字字面量, 字符串字面量
+/// 空字面量, 符号, 对子
+/// 过程(内置过程与特殊形式), lambda表达式(外部定义)
 #[derive(Clone)]
 pub enum Value {
     BooleanValue(bool),
@@ -33,6 +42,8 @@ impl Debug for Value {
         }
     }
 }
+
+/// 将"值"类型用字符串的方式表达出来
 impl ToString for Value {
     fn to_string(&self) -> String {
         match self {
@@ -43,7 +54,7 @@ impl ToString for Value {
                     format!("{}", *n as i64)
                 }
                 else {
-                    format!("{:6}", n)
+                    format!("{}", n)
                 }
             },
             Value::StringValue(s) => {
@@ -118,12 +129,8 @@ impl ToString for Value {
     }
 }
 
-/*
-很多类型，如bool、Rc的指针等，都已经实现了哈希方法，
-但浮点类型f64并没有，原因是Nan，
-Lua禁止使用Nan作为索引，我们就可以忽略Nan而默认浮点类型可以做哈希。
-选择了转换为更简单的整型i64来做哈希。
- */
+/// 允许值进行哈希
+/// 用于加入哈希表
 impl Hash for Value {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
@@ -142,31 +149,11 @@ impl Hash for Value {
     }
 }
 
-/*impl Value {
-    pub fn to_vector(&self) -> Vec<Self> {
-        let mut vec: Vec<Self> = Vec::new();
-        let mut my_value = self.clone();
-        loop {
-            match my_value {
-                v @ Self::BooleanValue(_) => vec.push(v.clone()),
-                v @ Self::NumericValue(_) => vec.push(v.clone()),
-                v @ Self::StringValue(_) => vec.push(v.clone()),
-                Self::NilValue => return vec,
-                v @ Self::SymbolValue(_) => vec.push(v.clone()),
-                Self::PairValue(car, cdr) => {
-                    vec.push(*car.clone());
-                    my_value = (*cdr).clone();
-                },
-                _ => panic!("Invalid format when converting pairvalue to vector."),
-            }
-        }
-    }
-}*/
-use std::rc::Rc;
 
-use crate::error::ErrorEval;
-use crate::eval_env::EvalEnv;
+
 impl Value {
+    /// 将值转化为向量
+    /// 其它值转化还是本身, 但是会将对子值展开.
     pub fn to_vector(&self) -> Result<Vec<Self>, ErrorEval> {
         fn to_vector_recursive(expr: &Value, vec: &mut Vec<Rc<Value>>) -> Result<(), ErrorEval>{
             match expr {

@@ -1,3 +1,7 @@
+/// 定义了交互模式, 是在命令行解析之后, 用户与解释器内核进行互动的工具之一
+/// 允许类似Python IDLE的自动缩进
+/// 具备良好的错误处理性能
+
 use crate::error::ErrorRead;
 use std::io;
 use crate::tokenizer::Tokenizer;
@@ -6,6 +10,8 @@ use crate::eval_env::EvalEnv;
 use crate::error::ErrorEval;
 use std::io::Write;
 use std::rc::Rc;
+
+/// 定义了交互模式自动机
 pub struct ReaderInteract {
     space_buffer: Vec<usize>,
     buffer_modify_pos: isize,
@@ -15,11 +21,10 @@ pub struct ReaderInteract {
     templine: String,
     line: String,
     env: Rc<EvalEnv>,
-    // is_after_sharp: bool,
-    // is_inside_multi_line_note: bool,
 }
 
 impl ReaderInteract {
+    /// 新建交互模式
     pub fn new() -> Self {
         Self {
             space_buffer: Vec::new(), 
@@ -32,8 +37,9 @@ impl ReaderInteract {
             env: Rc::new(EvalEnv::new()),
         }
     }
+
+    /// 读入一行文本, 检测是否已经是一个完整的表达式, 并且处理自动缩进
     fn readline(&mut self) -> Result<(), ErrorRead> {
-        // let mut input = String::new();
         self.templine.clear();
         let code = io::stdin().read_line(&mut self.templine);
         // println!("LINE: {}", self.templine);
@@ -45,10 +51,7 @@ impl ReaderInteract {
         if self.templine.len() == 1 && self.templine.clone().pop().unwrap() == '\n' {
             return Err(ErrorRead::KeyboardInterrupt);
         }
-        // println!("LINE: {}", self.templine);
-        // for (index, ch) in self.templine.chars().enumerate() {
         for ch in self.templine.chars() {
-            // println!("{}", ch);
             match ch {
                 '\n' => {
                     if self.is_inside_comment { self.is_inside_comment = false; continue; }
@@ -58,9 +61,7 @@ impl ReaderInteract {
                     if self.is_after_slash { self.is_after_slash = false; }
                     if self.is_inside_quote { self.space_buffer[self.buffer_modify_pos as usize] += 1; } // 检查bound
                     else { 
-                        // println!("Before push: {:?}", self.space_buffer);
                         self.buffer_modify_pos += 1; self.space_buffer.push(1); 
-                        // println!("After push: {:?}", self.space_buffer);
                     }
                 },
                 ')' => {
@@ -69,16 +70,8 @@ impl ReaderInteract {
                     if self.is_inside_quote { self.space_buffer[self.buffer_modify_pos as usize] += 1; } // 检查bound
                     else {
                         if self.space_buffer.is_empty() {return Err(ErrorRead::SyntaxFailure)}
-                        /*if self.space_buffer.pop().is_some() {
-                            self.buffer_modify_pos -= 1;
-                        }
-                        else {
-                            return Err(ErrorRead::SyntaxFailure);
-                        }*/
-                        // println!("Before Pop: {:?}", self.space_buffer);
                         self.buffer_modify_pos -= 1;
                         self.space_buffer.pop();
-                        // println!("After Pop: {:?}", self.space_buffer);
                     }
                 },
                 ';' => {
@@ -118,12 +111,13 @@ impl ReaderInteract {
                     self.space_buffer[self.buffer_modify_pos as usize] += 1; // 检查bound
                 },
             }
-            // println!("Here it is: {:?}", self.space_buffer);
         }
         self.line.push_str(&self.templine);
         self.line.push('\n');
         return Ok(());
     }
+
+    /// 用于打印交互模式中所需要的行提示符'>>>'与'...'并打印正确数量的空格完成缩进
     fn printline(&mut self) -> () {
         let mut result: usize = 0;
         for s in &self.space_buffer {
@@ -140,6 +134,8 @@ impl ReaderInteract {
             io::stdout().flush().unwrap();
         }
     }
+
+    /// 检测到一个完整表达式之后进行处理
     fn process(&self) -> Result<String, ErrorEval> {
         let mut tokenizer: Tokenizer = Tokenizer::new(self.line.clone());
         let tokens = tokenizer.tokenize();
@@ -148,12 +144,16 @@ impl ReaderInteract {
         let result = self.env.clone().eval(value)?;
         Ok(result.to_string())
     }
+
+    /// 处理输出
     fn output(&self, result: String) -> () {
         if result == "()".to_string() {
             return;
         }
         println!("{}", result);
     }
+
+    /// 清空交互模式自动机的状态
     fn flush(&mut self) -> () {
         self.line.clear();
         self.templine.clear();
@@ -163,6 +163,8 @@ impl ReaderInteract {
         self.space_buffer.clear();
         self.buffer_modify_pos = -1;
     }
+
+    /// 调用交互模式
     pub fn call(&mut self) -> () {
         loop {
             self.printline();

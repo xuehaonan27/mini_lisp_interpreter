@@ -1,3 +1,5 @@
+/// 命令行解析模块
+
 use std::error::Error;
 use crate::reader_interact::ReaderInteract;
 use crate::reader_file::ReaderFile;
@@ -51,12 +53,6 @@ impl Config {
                         Some(path) => input_file_path = Some(path),
                     }
                 },
-                /*Some(s) if s == "-o".to_string() || s == "--output".to_string() => {
-                    match args.next() {
-                        None => return Err("Should give an output file path"),
-                        Some(path) => output_file_path = Some(path),
-                    }
-                },*/
                 Some(s) if s == "-o".to_string() || s == "--output".to_string() => return Err("Unknown"),
                 _ => return Err("Fail to parse the command, please retry"),
             }

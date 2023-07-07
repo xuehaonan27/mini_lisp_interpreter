@@ -1,6 +1,14 @@
+/// 定义了Tokenize机以及Tokenize的过程
+
 use crate::tokenizer::token::Token;
+
+/// Token结束符
 pub const TOKEN_END: [char; 6] = ['(', ')', '\'', '`', ',', '"'];
+
+/// 空字符
 pub const TOKEN_SPACE: [char; 4] = [' ','\n','\r','\t'];
+
+/// Tokenize机
 #[derive(Debug)]
 pub struct Tokenizer {
     content_vec: Vec<char>,
@@ -12,6 +20,8 @@ impl Tokenizer {
         let content_vec: Vec<char> = content.chars().collect();
         Self { content_vec, pos: 0}
     }
+
+    /// 获取下一个token
     fn next_token(&mut self) -> Option<Token> {
         while self.pos < self.content_vec.len() {
             let c = self.content_vec[self.pos];
@@ -86,6 +96,8 @@ impl Tokenizer {
         }
         None
     }
+
+    /// 将整个传入的文本进行Tokenize
     pub fn tokenize(&mut self) -> Vec<Token> {
         let mut v: Vec<Token> = Vec::new();
         loop {

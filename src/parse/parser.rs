@@ -1,3 +1,5 @@
+/// 使用Token进行分析, 返回"值"
+
 use crate::tokenizer::Token;
 use crate::value::Value;
 pub struct Parser {
@@ -5,10 +7,13 @@ pub struct Parser {
 }
 
 impl Parser {
+    /// 新建一个parse机
     pub fn new(mut tokens: Vec<Token>) -> Self{
         tokens.reverse();
         Self {tokens}
     }
+
+    /// 使用parse机进行parse
     pub fn parse(&mut self) -> Value {
         let token: Option<Token> = self.tokens.pop();
         match token {

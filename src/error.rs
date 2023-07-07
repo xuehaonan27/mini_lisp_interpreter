@@ -1,24 +1,11 @@
+#![allow(dead_code)]
+
 /// 定义错误类型
+
 use std::error;
 use std::fmt;
 
-// 自定义错误类型
-/*#[derive(Debug)]
-pub struct ErrorToVector {
-    pub message: String,
-}
-impl fmt::Display for ErrorToVector {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.message)
-    }
-}
-impl error::Error for ErrorToVector {}
-impl Clone for ErrorToVector {
-    fn clone(&self) -> Self {
-        ErrorToVector { message: self.message.clone() }
-    }
-}*/
-
+/// 求值错误类型
 #[derive(Debug)]
 pub struct ErrorEval {
     pub message: String,
@@ -35,6 +22,8 @@ impl Clone for ErrorEval {
         ErrorEval { message: self.message.clone(), index: self.index}
     }
 }
+
+/// 读写错误类型
 #[derive(Debug, PartialEq)]
 pub enum ErrorRead {
     KeyboardInterrupt,

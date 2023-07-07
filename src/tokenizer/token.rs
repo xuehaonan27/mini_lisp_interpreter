@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-/// 定义了token的type
+/// 定义了Token的表达.
 #[derive(Debug, Clone)]
 pub enum Token {
     ParL,
@@ -14,6 +14,8 @@ pub enum Token {
     Identifier(String),
 }
 impl ToString for Token {
+    /// 将Token使用字符串字面量表示出来. 
+    /// 仅用于调试
     fn to_string(&self) -> String {
         match self {
             Token::Boolean(b) => format!("(BOOLEAN_LITERAL {} )", b),

@@ -1,3 +1,5 @@
+/// 定义了求值环境以及解析器求值的过程
+
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -6,16 +8,22 @@ use crate::special_forms::*;
 use crate::builtins::*;
 use crate::value::BuiltinFn;
 use crate::error::ErrorEval;
+
+/// 求值环境的定义
+/// symbol_map: 利用RefCell, 使得在整个求值环境实例不可变的情况下内部可变. 具有重要意义: 函数类型定义中不可以出现&mut, 整个求值环境实例不可变, 但是内部又需要修改内部
+/// parent: 父级求值环境
+/// special_forms: 特殊形式对应表
+/// builtin_procs: 内置过程对应表
 #[derive(Clone)]
 pub struct EvalEnv{
     pub symbol_map: RefCell<HashMap<String, Value>>,
-    // pub parent: Rc<Option<EvalEnv>>,
     pub parent: Option<Rc<EvalEnv>>,
     pub special_forms: HashMap<String, SpecialForm>,
     pub builtin_procs: HashMap<String, BuiltinFn>
 }
 
 impl EvalEnv {
+    /// 新建求值环境, 完成对应表的初始化工作
     pub fn new() -> Self {
         let special_forms:HashMap<String, SpecialForm> = HashMap::from([
             ("define".to_string(), define_form as SpecialForm),
@@ -90,10 +98,11 @@ impl EvalEnv {
             ("sort".to_string(), sort as BuiltinFn),
         ]);
         let symbol_map: RefCell<HashMap<String, Value>> = RefCell::new(HashMap::new());
-        // let parent: Rc<Option<EvalEnv>> = Rc::new(None);
         let parent: Option<Rc<EvalEnv>> = None;
         Self {symbol_map, parent, special_forms, builtin_procs}
     }
+
+    /// 从当前求值环境, 插入params - args键值对, 形成新的环境
     pub fn derive(self: Rc<EvalEnv>, params: Vec<String>, args: Vec<Value>) -> Self {
         if params.len() < args.len() {
             panic!("Too many parameters.");
@@ -103,8 +112,7 @@ impl EvalEnv {
         }
         let special_forms: HashMap<String, SpecialForm> = self.special_forms.clone();
         let builtin_procs: HashMap<String, BuiltinFn> = self.builtin_procs.clone();
-        // let parent: Rc<Option<EvalEnv>> = Rc::new(Some(self.clone()));
-        let parent: Option<Rc<EvalEnv>> = Some(Rc::clone(&self)); // WARNING!!!!!
+        let parent: Option<Rc<EvalEnv>> = Some(Rc::clone(&self));
         let mut symbol_map: HashMap<String, Value> = HashMap::new();
         for (key, value) in params.iter().zip(args.iter()) {
             symbol_map.insert(key.clone(), value.clone());
@@ -112,47 +120,9 @@ impl EvalEnv {
         let symbol_map = RefCell::new(symbol_map);
         Self {symbol_map, parent, special_forms, builtin_procs}
     }
+
+    /// 在当前求值环境及其各级父级环境中查找变量绑定
     pub fn find_binding(self: Rc<EvalEnv>, name: &String) -> Option<Value> {
-        /* let temp_env = env.clone();
-            if temp_env.symbol_map.borrow().contains_key(&s) {
-                let borrow = temp_env.symbol_map.borrow();
-                let value: Option<&Value> = borrow.get(&args[1].to_string());
-                if value.is_some() {
-                    let mut ref_of_map = env.symbol_map.borrow_mut();
-                    _ = ref_of_map.insert(s, value.unwrap().clone());
-                    println!("{:?}", ref_of_map);
-                }
-                else {
-                    let mut ref_of_map = env.symbol_map.borrow_mut();
-                    _ = ref_of_map.insert(s, temp_env.clone().eval(args[1].clone()).expect("Corruption when evaluating a value in form <define>."));
-                    println!("{:?}", ref_of_map);
-                }
-            }
-            else {
-                let mut ref_of_map = env.symbol_map.borrow_mut();
-                _ = ref_of_map.insert(s, temp_env.eval(args[1].clone()).expect("Corruption when evaluating a value in form <define>."));
-                println!("{:?}", ref_of_map);
-            } */
-        // let temp_env = &*self.to_owned();
-        // let mut temp_env = Rc::make_mut(&mut self).clone();
-
-
-
-        /*let temp_env = self.clone();
-        println!("{:p}", &*self);
-        println!("{:p}", &temp_env);
-        if temp_env.symbol_map.borrow().contains_key(name) {
-            self.symbol_map.borrow().get(name).cloned()
-        }
-        else {
-            if self.parent.is_none() {
-                None
-            }
-            else {
-                self.parent.clone().unwrap().find_binding(name)
-            }
-        }*/
-        
         if self.symbol_map.borrow().contains_key(name) {
             self.symbol_map.borrow().get(name).cloned()
         }
@@ -165,15 +135,11 @@ impl EvalEnv {
             }
         }
     }
-    /// 将待传入参数由Value::PairValue类型转为向量并先在当前环境中逐个求值
-    /// 由于其内部调用的eval是求值务必求到尽头
-    /// 所以最终返回的向量包含的值必然都是
-    /* fn eval_list(&self, expr: Value) -> Vec<Value> {
-        let mut result: Vec<Value> = Vec::new();
-        let v: Vec<Value> = expr.to_vector().expect("Corruption when converting a value to vector in fn <eval_list>");
-        v.iter().for_each(|value| { result.push(self.eval(value.clone()).expect("Corruption when evaluating a list in fn <eval_list>"));});
-        result
-    }*/
+    
+    /// 解释器求值过程
+    /// 拿到parse之后的"值"
+    /// 一般来说, 一个表达式一定是一个字面量(直接返回本身即可)
+    /// 或者是一个由括号表达式括起来的对子值(对这个PairValue进行求值即可)
     pub fn eval(self: Rc<EvalEnv>, expr: Value) -> Result<Value, ErrorEval> {
         match expr {
             Value::BooleanValue(_) => return Ok(expr),
@@ -206,6 +172,8 @@ impl EvalEnv {
                     }
                 }
             }
+            
+            // 对子值比较特殊, 需要展开求解
             exprs @ Value::PairValue(_, _) => {
                 let v: Vec<Value> = exprs.to_vector().map_err(|error| ErrorEval{
                     message: format!("{}: [eval]: Fail to convert a value to vector\n{}", error.index + 1, error.message),
@@ -217,7 +185,6 @@ impl EvalEnv {
                             None => {},
                             Some(Value::ProcedureValue(f)) => {
                                 let result_args: Result<Vec<Value>, ErrorEval> = v[1..].iter().cloned().map(|value| self.clone().eval(value)).collect();
-                                // let args: Vec<Value> = v[1..].iter().cloned().map(|value| self.clone().eval(value).expect("Corruption when evaluating a value in fn <eval>")).collect();
                                 let args = result_args.map_err(|error| ErrorEval{
                                     message: format!("{}: [eval]: Fail to evaluate a value\n{}", error.index + 1, error.message),
                                     index: error.index + 1
@@ -225,9 +192,6 @@ impl EvalEnv {
                                 return f(args, Rc::clone(&self));
                             },
                             Some(Value::LambdaValue(params_in_lambda, body, env_in_lambda)) => {
-                                //let args: Vec<Value> = v[1..].iter().map(|value| self.clone().eval(value.clone()).expect("Corruption when evaluating a value in env.eval: lambda.")).collect();
-                                // let args: Vec<Value> = v[1..].iter().map(|value| self.clone().eval(value.clone()).expect("Corruption when evaluating a value in env.eval: lambda.")).collect();
-                                // let result_args: Result<Vec<Value, ErrorEval> = v[1..].iter().map(|value| self.clone().eval(value.clone())).collect();
                                 let result_args: Result<Vec<Value>, ErrorEval >= v[1..].iter().map(|value| self.clone().eval(value.clone())).collect();
                                 let args = result_args.map_err(|error| ErrorEval{
                                     message: format!("{}: [eval]: Fail to evaluate a value\n{}", error.index + 1, error.message),
@@ -247,13 +211,11 @@ impl EvalEnv {
                         }
                         if self.special_forms.contains_key(s) {
                             if *s == "unquote".to_string() {
-                                // panic!("Calling unquote outside quasiquote is an undefined behavior.");
                                 return Err(ErrorEval{message: format!("{}: [eval]: Calling unquote outside quasiquote is an undefined behavior", 0), index: 0});
                             }
                             return self.special_forms.get(s).unwrap()(v[1..].to_vec(), Rc::clone(&self));
                         }
                         else if self.builtin_procs.contains_key(s) {
-                            // let args: Vec<Value> = v[1..].iter().cloned().map(|value| self.clone().eval(value).expect("Corruption when evaluating a value in fn <eval>")).collect();
                             let result_args: Result<Vec<Value>, ErrorEval> = v[1..].iter().map(|value| self.clone().eval(value.clone())).collect();
                             let args: Vec<Value> = result_args.map_err(|error| ErrorEval{
                                 message: format!("{}: [eval]: Fail to evaluate a value\n{}", error.index + 1, error.message),
@@ -262,7 +224,6 @@ impl EvalEnv {
                             return self.builtin_procs.get(s).unwrap()(args, Rc::clone(&self));
                         }
                         else {
-                            // panic!("Name {s} not defined.");
                             return Err(ErrorEval{message: format!("{}: [eval]: Name {s} not defined", 0), index: 0});
                         }
 
@@ -276,7 +237,6 @@ impl EvalEnv {
                             })?;
                             new_vec.push(result_arg);
                             Ok(())
-                            // new_vec.push(self.clone().eval(value.clone()).expect("Corruption when evaluating a value in fn <eval>"));
                         })?;
                         let new_expr: Value = list(new_vec, Rc::clone(&self)).map_err(|error|ErrorEval{
                             message: format!("{}: [eval]: Fail to pack the value\n{}", error.index + 1, error.message),
@@ -285,15 +245,12 @@ impl EvalEnv {
                         self.eval(new_expr)
                     },
                     Value::ProcedureValue(f) => {
-                        // let proc: Value = self.eval(v[0].clone());
-                        // self.apply(proc, v[1..].to_vec())
                         f(v[1..].to_vec(), Rc::clone(&self)).map_err(|error| ErrorEval {
                             message: format!("{}: [eval]: Fail to call the given procedure\n{}", error.index + 1, error.message),
                             index: error.index + 1
                         })
                     },
                     Value::LambdaValue(params, body, env) => {
-                        // let env_derived: Rc<EvalEnv> = env.derive(*params.clone(), v[1..].to_vec()).into();
                         let env_derived: Rc<EvalEnv> = env.clone().derive(*params.clone(), v[1..].to_vec()).into();
                         let mut result: Value = Value::NilValue;
                         for bodyv in *body.clone() {
@@ -314,7 +271,4 @@ impl EvalEnv {
             },
         }
     }
-    /* fn apply(&self, proc: Value, args: Vec<Value>) -> Value {
-        todo!();
-    }*/
 }
