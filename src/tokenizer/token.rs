@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 /// 定义了token的type
 #[derive(Debug, Clone)]
 pub enum Token {
