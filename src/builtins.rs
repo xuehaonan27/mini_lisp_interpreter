@@ -7,6 +7,8 @@ use std::panic;
 use std::rc::Rc;
 use crate::error::ErrorEval;
 
+/// apply 内置过程
+/// 将过程proc调用至参数param
 pub fn apply(params: Vec<Value>, env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 2{
         return Err(ErrorEval { message: format!("{}: Builtin Procedure <apply>: Missing argument", 0), index: 0 });
@@ -42,6 +44,10 @@ pub fn apply(params: Vec<Value>, env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
         }
     }
 }
+
+/// print 内置过程
+/// (print <expr1> <expr2> <expr3>)
+/// 调用分别打印多个表达式
 pub fn print(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     params.iter().for_each(|param| println!("{}", param.to_string()));
     Ok(Value::NilValue)
@@ -65,6 +71,11 @@ pub fn display(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval
         Ok(Value::NilValue)
     }
 }
+
+/// displayln内置过程
+/// (display <expr>)
+/// 仅仅支持一个表达式的时候使用
+/// 打印表达式并且换行
 pub fn displayln(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
         return Err(ErrorEval { message: format!("{}: Builtin Procedure <displayln>: Missing argument", 0), index: 0 });
@@ -84,6 +95,10 @@ pub fn displayln(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEv
         Ok(Value::NilValue)
     }
 }
+
+/// error 内置过程
+/// 调用error以实现内置的错误调用
+/// 可附带至多一个错误退出码, 并不限制数据类型
 pub fn error(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() > 1 {
         return Err(ErrorEval { message: format!("{}: Builtin Procedure <error>: Too many argument", 0), index: 0 });
@@ -147,6 +162,10 @@ pub fn exit_force(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorE
         }
     }
 }
+
+/// newline 内置过程
+/// 打印一个空行
+/// 不允许附带任何的参数
 pub fn newline(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.is_empty() {
         println!();
@@ -156,7 +175,9 @@ pub fn newline(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval
         return Err(ErrorEval { message: format!("{}: Builtin Procedure <newline>: Cannot append argument", 0), index: 0 });
     }
 }
-
+/// atom? 内置过程
+/// 判断是否为原子类型数据
+/// 原子类型数据包括: 布尔类型, 数字类型, 字符串类型, 符号字面量类型, 空表类型
 pub fn atom_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
         return Err(ErrorEval { message: format!("{}: Builtin Procedure <atom?>: Missing argument", 0), index: 0 });
@@ -175,6 +196,9 @@ pub fn atom_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, Error
         }
     }
 }
+
+/// boolean? 内置过程
+/// 判断是否为布尔类型值
 pub fn boolean_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
         return Err(ErrorEval { message: format!("{}: Builtin Procedure <boolean?>: Missing argument", 0), index: 0 });
@@ -189,6 +213,9 @@ pub fn boolean_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, Er
         }
     }
 }
+
+/// integer? 内置过程
+/// 判断是否为整数
 pub fn integer_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
         return Err(ErrorEval { message: format!("{}: Builtin Procedure <integer?>: Missing argument", 0), index: 0 });
@@ -210,6 +237,9 @@ pub fn integer_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, Er
         }
     }
 }
+
+/// list? 内置过程
+/// 判断是否为列表类型
 pub fn list_or_not(params: Vec<Value>, env: Rc<EvalEnv>) -> Result<Value, ErrorEval>{
     if params.len() < 1 {
         return Err(ErrorEval { message: format!("{}: Builtin Procedure <list?>: Missing argument", 0), index: 0 });
@@ -228,6 +258,9 @@ pub fn list_or_not(params: Vec<Value>, env: Rc<EvalEnv>) -> Result<Value, ErrorE
         }
     }
 }
+
+/// number? 内置过程
+/// 判断是否为数字类型
 pub fn number_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
         return Err(ErrorEval { message: format!("{}: Builtin Procedure <number?>: Missing argument", 0), index: 0 });
@@ -242,6 +275,8 @@ pub fn number_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, Err
         }
     }
 }
+
+/// null? 内置过程, 判断是否
 pub fn null_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
     if params.len() < 1 {
         return Err(ErrorEval { message: format!("{}: Builtin Procedure <null?>: Missing argument", 0), index: 0 });
@@ -1067,6 +1102,12 @@ pub fn zero_or_not(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, Error
         }
     }
 }
-pub fn sort(_params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
-    todo!();
+pub fn sort(params: Vec<Value>, _env: Rc<EvalEnv>) -> Result<Value, ErrorEval> {
+    // todo!();
+    if params.len() < 1 {
+        return Err(ErrorEval { message: format!("{}: Builtin Procedure <sort?>: Missing argument", 0), index: 0 });
+    }
+    else {
+        todo!();
+    }
 }
